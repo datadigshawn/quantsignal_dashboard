@@ -1,0 +1,22 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+*.error.log
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# 訪客計數（本機狀態，不進 git）
+data/visitor_count.json
+
+# Streamlit 相關
+.streamlit/secrets.toml

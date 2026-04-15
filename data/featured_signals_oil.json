@@ -1,0 +1,1 @@
+[{"id":"perf_dual_ema_1h","symbol":"CLUSDT","strategy_id":"dual_ema","timeframe":"1h","type":"SELL","entry_price":94.42,"roi":5.68,"total_return":43.51,"win_rate":83.33,"status":"active","entry_time":1776096000000,"comment":"Strategy: DUAL EMA","source":"algo"}]

@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>QuantSignal v2 - 量化交易信號平台</title>
+  <meta name="description" content="QuantSignal 量化交易信號平台 — 提供專業量化策略回測、即時交易信號與績效追蹤。支援 BTC、ETH、黃金等多種資產。" />
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://q-signals-production.up.railway.app/" />
+  <meta property="og:title" content="QuantSignal — WTI 原油期貨全新上線！AI 訊號一站看個夠" />
+  <meta property="og:description" content="全新上線 CL 原油期貨 AI 策略訊號，加上 BTC、ETH、SOL、PAXG 黃金、SPX / NQ / ES 美股期貨，9 大策略 × 8 類資產，即時訊號一站式看完。進階會員專享。" />
+  <meta property="og:image" content="https://q-signals-production.up.railway.app/og-image.png?v=oil2" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="QuantSignal — WTI 原油期貨全新上線！AI 訊號一站看個夠" />
+  <meta name="twitter:description" content="全新上線 CL 原油期貨，加上 BTC、ETH、SOL、PAXG、SPX / NQ / ES，9 大 AI 策略 × 8 類資產，即時訊號一站式看完。" />
+  <meta name="twitter:image" content="https://q-signals-production.up.railway.app/og-image.png?v=oil2" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/auth.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#EAB308",
+            "accent-red": "#EF4444",
+            "background-dark": "#0a0c0a",
+            "card-dark": "#161d16",
+            "border-dark": "#243324",
+          },
+          fontFamily: { "display": ["Inter", "sans-serif"] },
+        },
+      },
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .premium-gradient {
+      background: linear-gradient(135deg, rgba(0, 255, 0, 0.05) 0%, rgba(0, 0, 0, 0) 100%);
+    }
+
+    .glow-button {
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.2);
+    }
+
+    .glass-card {
+      background: rgba(22, 29, 22, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(234, 179, 8, 0.1);
+    }
+
+    .platinum-gradient {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+    }
+
+    .price-ticker-container {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .price-ticker {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: ticker 30s linear infinite;
+    }
+
+    @keyframes ticker {
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(-33.33%);
+      }
+    }
+
+    @keyframes pulse-green {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .pulse-green {
+      animation: pulse-green 2s ease-in-out infinite;
+    }
+
+    .glow-indigo {
+      box-shadow: 0 0 20px rgba(79, 70, 229, 0.2);
+    }
+  </style>
+</head>
+
+<body class="bg-background-dark text-slate-100 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header
+    class="sticky top-0 z-50 bg-background-dark/80 backdrop-blur-md border-b border-border-dark px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="bg-primary p-1.5 rounded-lg">
+        <span class="material-symbols-outlined text-background-dark font-bold text-xl">query_stats</span>
+      </div>
+      <div class="flex flex-col">
+        <h1 class="text-xl font-bold tracking-tight text-white leading-none">QuantSignal</h1>
+        <span class="text-[9px] text-slate-500 font-bold uppercase tracking-tighter mt-0.5">量化交易信號平台</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div id="dbStatus"
+        class="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-800 border border-border-dark hidden">
+        <span class="w-1.5 h-1.5 rounded-full bg-red-500" id="dbStatusDot"></span>
+        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter" id="dbStatusText">資料庫錯誤</span>
+      </div>
+      <a href="login.html" id="authLink" class="flex flex-col items-end">
+        <span class="text-sm text-primary font-bold hover:underline">登入</span>
+        <span class="text-[9px] text-slate-500 font-medium">Login / Register</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Live Price Ticker Bar -->
+  <div class="border-b border-border-dark bg-card-dark/50 price-ticker-container">
+    <div id="priceTicker" class="flex items-center py-2 px-4">
+      <div class="flex items-center gap-2 shrink-0 bg-card-dark z-10 pr-4">
+        <span class="w-2 h-2 rounded-full bg-primary pulse-green"></span>
+        <div class="flex flex-col items-center leading-none">
+          <span class="text-[10px] uppercase tracking-widest text-primary font-bold">LIVE</span>
+          <span class="text-[8px] text-primary/60 font-medium">實時行情</span>
+        </div>
+      </div>
+      <div id="priceItems" class="price-ticker">
+        <span class="text-slate-500 px-4">Loading prices...</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="flex-1 overflow-y-auto pb-24">
+    <!-- Promo Banner -->
+    <div id="promoBanner" class="px-4 pt-4">
+      <div
+        class="bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20 rounded-xl p-3 flex items-start gap-3">
+        <span class="material-symbols-outlined text-yellow-500 text-xl shrink-0 mt-0.5">campaign</span>
+        <div>
+          <p class="text-xs text-yellow-500 font-bold mb-1 italic">免費進階權限 FREE PREMIUM</p>
+          <p class="text-[11px] text-slate-300 leading-relaxed">在合作交易平台註冊即可獲得 <span
+              class="text-white font-bold">免費進階策略信號</span>
+            <br /><span class="text-slate-500 text-[10px]">請至個人資料提交帳號 ID。</span>
+          </p>
+        </div>
+        <div class="flex flex-col gap-2 ml-auto">
+          <a href="profile.html"
+            class="text-[10px] bg-yellow-500/20 text-yellow-500 px-3 py-2 rounded-lg font-bold hover:bg-yellow-500/30 whitespace-nowrap text-center">前往申請 &rarr;</a>
+          <a href="https://lin.ee/WuRqowF" target="_blank" title="Contact Support on LINE"
+            class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#06C755]/10 text-[#06C755] border border-[#06C755]/20 hover:bg-[#06C755]/20 transition-all text-[10px] font-bold">
+            <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M24 10.304c0-5.232-5.383-9.489-12-9.489s-12 4.257-12 9.489c0 4.69 4.27 8.604 10.04 9.351.391.084.923.258 1.058.591.121.303.079.777.039 1.083l-.173 1.041c-.052.312-.252 1.221 1.083.666 1.334-.555 7.203-4.242 9.831-7.257 1.838-2.029 2.122-3.483 2.122-5.476zm-16.712 4.102h-1.442a.288.288 0 0 1-.288-.288V9.166a.288.288 0 0 1 .288-.288h1.442a.288.288 0 0 1 .288.288v4.95a.288.288 0 0 1-.288.288zm3.434 0h-1.44a.288.288 0 0 1-.288-.288V9.166a.288.288 0 0 1 .288-.288h.002a.288.288 0 0 1 .288.288l.002 2.768 2.053-2.71c.061-.081.161-.137.279-.146h.547a.288.288 0 0 1 .288.288v4.95a.288.288 0 0 1-.288.288h-1.442a.288.288 0 0 1-.288-.288v-2.766l-2.052 2.709a.301.301 0 0 1-.252.141zm5.344-1.63h-1.44a.288.288 0 0 1-.288-.288V9.166a.288.288 0 0 1 .288-.288h1.442a.288.288 0 0 1 .288.288v3.224h1.442a.288.288 0 0 1 .288.288v1.14c0 .159-.129.288-.288.288zm3.434-3.32h-1.44a.288.288 0 0 1-.288-.288v-.288h1.44c.159 0 .288-.129.288-.288v-1.14a.288.288 0 0 0-.288-.288h-3.17c-.159 0-.288.129-.288.288v4.95c0 .159.129.288.288.288h3.17c.159 0 .288-.129.288-.288v-1.14a.288.288 0 0 0-.288-.288h-1.44v-.288h1.44a.288.288 0 0 0 .288-.288V10.6a.288.288 0 0 0-.288-.288z" />
+            </svg>
+            客服
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="px-4 pt-4">
+      <div class="relative">
+        <span
+          class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+        <input id="strategySearch" type="text" placeholder="搜尋商品或策略 Search BTC, Gold, Granville..."
+          class="w-full bg-card-dark border border-border-dark rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all font-medium" />
+        <button id="searchClear"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors hidden">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Strategy Type Tabs -->
+    <div class="px-4 pt-3">
+      <div class="flex border-b border-border-dark overflow-x-auto items-end">
+        <button
+          class="tab-btn px-4 py-2 text-sm font-semibold border-b-2 border-primary text-primary whitespace-nowrap flex flex-col items-center relative"
+          data-filter="all">
+          <div class="flex items-center gap-1.5">
+            <span>All Strategies</span>
+            <span class="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-bold"
+              id="count-all">0</span>
+          </div>
+          <span class="text-[9px] font-normal opacity-70">全部策略</span>
+        </button>
+        <button
+          class="tab-btn px-4 py-2 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 whitespace-nowrap flex flex-col items-center relative"
+          data-filter="Basic">
+          <div class="flex items-center gap-1.5">
+            <span>Basic</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-bold"
+              id="count-Basic">0</span>
+          </div>
+          <span class="text-[9px] font-normal opacity-70">基礎策略</span>
+        </button>
+        <button
+          class="tab-btn px-4 py-2 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 whitespace-nowrap flex flex-col items-center relative"
+          data-filter="Premium">
+          <div class="flex items-center gap-1.5">
+            <span>Premium</span>
+            <span class="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-bold"
+              id="count-Premium">0</span>
+          </div>
+          <span class="text-[9px] font-normal opacity-70">進階會員</span>
+        </button>
+        <button
+          class="tab-btn px-4 py-2 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 whitespace-nowrap flex flex-col items-center relative"
+          data-filter="Platinum">
+          <div class="flex items-center gap-1.5">
+            <span>Platinum</span>
+            <span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded-full font-bold"
+              id="count-Platinum">0</span>
+          </div>
+          <span class="text-[9px] font-normal opacity-70">白金專屬</span>
+        </button>
+        <!-- Copy Trading Portal -->
+        <div class="ml-auto mb-1 shrink-0 flex flex-col items-center">
+          <a href="https://copy-trading-strateg-had8.bolt.host/" target="_blank" rel="noopener"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 hover:border-purple-400/50 hover:from-purple-600/30 hover:to-indigo-600/30 transition-all group">
+            <span class="material-symbols-outlined text-purple-400 text-sm">rocket_launch</span>
+            <span class="text-[11px] font-bold text-purple-300 group-hover:text-purple-200">跟單 Copy Trading</span>
+            <span class="material-symbols-outlined text-purple-400/50 group-hover:text-purple-300 text-xs group-hover:translate-x-0.5 transition-all">arrow_forward</span>
+          </a>
+          <span class="text-[8px] text-orange-400/70 mt-0.5 flex items-center gap-0.5"><span class="material-symbols-outlined text-[9px]">warning</span>跟單有風險，歷史績效不代表未來表現</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Note -->
+    <div class="px-4 pt-4">
+      <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-start gap-3">
+        <span class="material-symbols-outlined text-blue-400 text-lg shrink-0 mt-0.5">info</span>
+        <div>
+          <p class="text-[11px] text-blue-300 leading-relaxed">
+            <span class="text-blue-400 font-bold">效能說明：</span>
+            由於即時數據庫容量限制，<span class="text-white font-bold">1H (1小時)</span> 策略展示最近 <span
+              class="text-white font-bold">45天</span> 績效，<span class="text-white font-bold">4H (4小時)</span> 策略展示最近 <span
+              class="text-white font-bold">180天</span> 績效。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-4 pt-4">
+      <div
+        class="bg-gradient-to-br from-orange-600/20 via-card-dark to-card-dark border border-orange-500/30 rounded-2xl p-6 relative overflow-hidden group shadow-[0_0_30px_rgba(249,115,22,0.08)]">
+        <div class="absolute -right-6 -top-6 opacity-10 group-hover:scale-110 transition-transform duration-[2000ms]">
+          <span class="material-symbols-outlined text-orange-500 text-[140px]">local_gas_station</span>
+        </div>
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <span class="flex h-2 w-2 rounded-full bg-orange-500 animate-pulse"></span>
+              <span
+                class="text-[10px] font-black bg-orange-500/20 text-orange-500 px-2 py-0.5 rounded uppercase tracking-widest">主推資產 Top Pick</span>
+            </div>
+            <div class="flex items-center gap-1.5 px-2 py-1 rounded bg-black/40 border border-orange-500/20">
+              <span class="material-symbols-outlined text-orange-500 text-xs">verified</span>
+              <span class="text-[9px] font-black text-orange-500 uppercase tracking-tighter">進階數據 Premium Feed</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col md:flex-row justify-between md:items-end gap-6">
+            <div class="flex-1">
+              <h3 class="text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">WTI 原油期貨 (CL/USDT)</h3>
+              <div class="flex items-baseline gap-4">
+                <span id="oilPriceMain"
+                  class="text-4xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums drop-shadow-md">$--.--</span>
+                <span id="oilChangeMain"
+                  class="text-base font-bold text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded">--%</span>
+              </div>
+            </div>
+
+            <div class="flex-1 bg-black/30 backdrop-blur-sm rounded-xl p-4 border border-white/5 min-h-[100px]">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest flex items-center gap-1">
+                  <span class="w-1 h-3 bg-orange-500 rounded-full"></span>
+                  進階會員信號
+                </span>
+                <span id="oilLiveIndicator"
+                  class="text-[9px] bg-red-500/20 text-red-500 px-1.5 py-0.5 rounded-full font-black animate-pulse hidden">LIVE</span>
+              </div>
+              <div id="oilFeaturedSignals" class="space-y-3">
+                <!-- Data loaded by loadFeaturedOilSignals() -->
+                <div class="flex items-center gap-3 animate-pulse">
+                  <div class="bg-orange-500/10 p-2 rounded-lg">
+                    <span class="material-symbols-outlined text-orange-500/50 text-xl">bolt</span>
+                  </div>
+                  <div>
+                    <p class="text-[11px] text-slate-600 font-medium italic">正在掃描 WTI 原油 (CL) 市場機會...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <!-- Success Rate Removed as requested -->
+              </div>
+              <a href="profile.html"
+                class="bg-primary hover:bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-sm transition-all flex items-center gap-2 glow-button whitespace-nowrap uppercase tracking-wider">
+                解鎖以獲得更多策略信號
+                <span class="material-symbols-outlined text-base">lock_open</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- Strategy List -->
+        <div class="p-4 space-y-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex flex-col">
+              <h2 class="text-xs font-bold uppercase tracking-widest text-slate-400 leading-none">交易策略信號</h2>
+              <span class="text-[9px] text-slate-600 font-bold uppercase mt-0.5">Trading Signals</span>
+            </div>
+            <div class="flex flex-col items-end leading-none">
+              <span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase">即時動態 LIVE</span>
+            </div>
+          </div>
+          <div id="strategyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Strategies loaded dynamically -->
+          </div>
+          <div id="noSearchResults" class="hidden flex-col items-center justify-center py-12 gap-3">
+            <span class="material-symbols-outlined text-slate-700 text-5xl">search_off</span>
+            <p class="text-slate-500 font-bold text-sm">找不到策略，請嘗試其他關鍵字。</p>
+          </div>
+        </div>
+
+        <!-- Official Partners -->
+        <div class="px-4 pb-6 mt-8">
+          <div class="flex flex-col items-center mb-4">
+            <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 leading-none text-center">官方合作夥伴 — 註冊獲得進階權限</h2>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <a href="https://reurl.cc/oKAgxg" target="_blank"
+              class="bg-card-dark border border-border-dark hover:border-primary/50 p-4 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all">
+              <img src="https://www.pionex.com/static/img/logo_white.png" alt="Pionex"
+                class="h-8 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
+                onerror="this.onerror=null; this.src='https://placehold.co/120x40/000000/FFFFFF?text=Pionex'">
+              <span
+                class="text-[10px] text-slate-500 uppercase font-bold group-hover:text-primary transition-colors">註冊帳號 &rarr;</span>
+            </a>
+            <a href="https://mytd.cc/py0h" target="_blank"
+              class="bg-card-dark border border-border-dark hover:border-blue-500/50 p-4 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all">
+              <img src="https://www.mitrade.com/assets/public/images/logo/logo-white.svg" alt="MiTRADE"
+                class="h-8 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
+                onerror="this.onerror=null; this.src='https://placehold.co/120x40/000000/FFFFFF?text=MiTRADE'">
+              <span
+                class="text-[10px] text-slate-500 uppercase font-bold group-hover:text-blue-500 transition-colors">註冊帳號 &rarr;</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- System Update Time -->
+        <div class="px-4 py-4 mt-4 border-t border-border-dark/30">
+          <p class="text-[9px] text-slate-600 text-center uppercase tracking-widest font-medium">最後更新時間：2026-02-17 23:50</p>
+        </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav
+    class="fixed bottom-0 left-0 right-0 bg-background-dark/95 backdrop-blur-md border-t border-border-dark px-6 pb-6 pt-3 flex justify-between items-center z-50">
+    <a class="flex flex-col items-center gap-1" href="index.html">
+      <span class="material-symbols-outlined text-primary font-bold"
+        style="font-variation-settings: 'FILL' 1">home</span>
+      <span class="text-[10px] font-bold text-primary uppercase tracking-tighter leading-none">首頁</span>
+      <span class="text-[8px] text-primary/60 font-medium">Home</span>
+    </a>
+    <a id="adminNavLink" class="hidden flex-col items-center gap-1 text-slate-500 hover:text-slate-200"
+      href="admin.html">
+      <span class="material-symbols-outlined">terminal</span>
+      <span class="text-[10px] font-bold uppercase tracking-tighter leading-none">管理端</span>
+      <span class="text-[8px] text-slate-600 font-medium group-hover:text-slate-400">Admin</span>
+    </a>
+    <a class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-200" href="profile.html">
+      <span class="material-symbols-outlined">person</span>
+      <span class="text-[10px] font-bold uppercase tracking-tighter leading-none">個人資料</span>
+      <span class="text-[8px] text-slate-600 font-medium group-hover:text-slate-400">Profile</span>
+    </a>
+  </nav>
+
+  <script>
+    let featuredGoldSignals = [];
+    let currentGoldPrice = 0;
+
+    // Load featured Oil (CL) signals — primary featured asset
+    async function loadFeaturedGoldSignals() {
+      try {
+        const res = await fetch('/api/featured-signals/oil');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const signals = await res.json();
+        featuredGoldSignals = Array.isArray(signals) ? signals : [];
+        renderFeaturedGoldSignals();
+      } catch (err) {
+        console.error('Failed to load featured oil signals:', err);
+        featuredGoldSignals = [];
+        renderFeaturedGoldSignals();
+      }
+    }
+
+    function renderFeaturedGoldSignals() {
+      const container = document.getElementById('oilFeaturedSignals');
+      const liveIndicator = document.getElementById('oilLiveIndicator');
+      if (!container) return;
+
+      if (!featuredGoldSignals || featuredGoldSignals.length === 0) {
+        console.log('[RenderFeaturedGold] No signals to display');
+        container.innerHTML = `
+          <div class="flex items-center gap-3 opacity-60">
+            <div class="bg-white/5 p-2 rounded-lg text-slate-500">
+              <span class="material-symbols-outlined text-xl">timer</span>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-500 font-medium italic">目前暫無 3 日內信號更新</p>
+            </div>
+          </div>
+        `;
+        if (liveIndicator) liveIndicator.classList.add('hidden');
+        return;
+      }
+      console.log('[RenderFeaturedGold] Rendering signals:', featuredGoldSignals.length);
+
+      if (liveIndicator) liveIndicator.classList.remove('hidden');
+
+      // Sort signals: active first, then by ROI descending
+      const signalsWithRoi = featuredGoldSignals.map(sig => {
+        const entry = parseFloat(String(sig.entry_price || '0').replace(/[^0-9.]/g, ''));
+        let roi = 0;
+        if (sig.status === 'active') {
+          if (currentGoldPrice > 0) {
+            const current = parseFloat(currentGoldPrice);
+            if (entry > 0) {
+              const isBuyDir = (sig.type === 'BUY' || sig.type === 'LONG');
+              roi = isBuyDir
+                ? ((current - entry) / entry) * 100
+                : ((entry - current) / entry) * 100;
+            }
+          }
+        } else {
+          roi = parseFloat(sig.roi || sig.calculatedRoi || 0);
+        }
+        return { ...sig, entry_price: entry, calculatedRoi: isNaN(roi) ? 0 : roi };
+      });
+
+      signalsWithRoi.sort((a, b) => {
+        if (a.status === 'active' && b.status !== 'active') return -1;
+        if (a.status !== 'active' && b.status === 'active') return 1;
+        return (b.calculatedRoi || 0) - (a.calculatedRoi || 0);
+      });
+
+      container.innerHTML = '';
+
+      // Limit to top 3 signals as requested
+      signalsWithRoi.slice(0, 3).forEach(sig => {
+        const isBuy = (sig.type === 'BUY' || sig.type === 'LONG');
+        const roi = sig.calculatedRoi;
+        const time = new Date(sig.entry_time).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const isActive = sig.status === 'active';
+
+        const cardHref = sig.source === 'manual'
+          ? `manual-signals.html?symbol=CLUSDT`
+          : `strategy-detail.html?strategy=${encodeURIComponent(sig.strategy_id || '')}&symbol=CLUSDT&timeframe=${encodeURIComponent(sig.timeframe || '4h')}`;
+        container.innerHTML += `
+          <div class="flex items-start gap-3 bg-white/5 p-3 rounded-xl border ${isActive ? 'border-orange-500/30' : 'border-white/5'} group hover:border-orange-500/50 transition-all cursor-pointer shadow-lg" onclick="location.href='${cardHref}'">
+            <div class="${isActive ? 'bg-orange-500/10' : 'bg-slate-800/50'} p-2 rounded-lg shrink-0 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined ${isActive ? 'text-orange-500' : 'text-slate-500'} text-lg font-bold">bolt</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-0.5">
+                <p class="text-[10px] font-black ${isActive ? 'text-orange-500' : 'text-slate-500'} uppercase tracking-wider italic">${sig.source === 'manual' ? '專家點評' : '策略預報'}${isActive ? ' (LIVE)' : ''}</p>
+                <span class="text-[8px] text-slate-600 font-medium">${time}</span>
+              </div>
+              <h4 class="text-xs font-black text-white leading-tight mb-1">${sig.type} @ <span class="text-orange-500">$${(parseFloat(sig.entry_price) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span> <span class="material-symbols-outlined text-[10px] text-slate-600 align-middle">double_arrow</span> <span class="${roi >= 0 ? 'text-primary' : 'text-red-400'}">${roi > 0 ? '+' : ''}${(roi || 0).toFixed(2)}%</span></h4>
+              <p class="text-[9px] text-slate-400 font-medium line-clamp-1 opacity-80">${sig.comment || (isBuy ? '突破關鍵壓力位' : '跌破關鍵支撐位')}</p>
+            </div>
+          </div>
+        `;
+      });
+
+      // Add Unlock link if there are more signals or just as a CTA
+      container.innerHTML += `
+        <div class="pt-0.5">
+          <a href="profile.html" class="flex items-center justify-center gap-2 py-1.5 w-full rounded-lg bg-orange-500/10 text-orange-500 text-[9px] font-black uppercase tracking-widest hover:bg-orange-500/20 transition-all">
+            <span class="material-symbols-outlined text-xs">auto_awesome</span>
+            進階會員解鎖原油信號
+          </a>
+        </div>
+      `;
+    }
+
+    // Load strategies — reads pre-computed performance from DB (no live backtest calls)
+    async function loadStrategies() {
+      try {
+        const strategyList = document.getElementById('strategyList');
+        strategyList.innerHTML = '';
+
+        // Add Manual Signal Card (Platinum) at top
+        const manualCard = createManualSignalCard();
+        strategyList.appendChild(manualCard);
+        updateManualROIOnCard();
+
+        // Fetch strategy list and DB-cached performance in parallel
+        const [strategiesRes, perfRes] = await Promise.all([
+          fetch('/api/strategies'),
+          fetch('/api/strategies/performance')
+        ]);
+
+        const data = await strategiesRes.json();
+        // Performance map: key = "strategyId_symbol_timeframe"
+        const perfMap = perfRes.ok ? await perfRes.json() : {};
+
+        // CLUSDT (WTI crude oil) featured first as main push
+        const symbols = ['CLUSDT', 'BTCUSDT', 'ETHUSDT', 'PAXGUSDT', 'SOLUSDT', 'SPXUSDT', 'NQUSDT', 'ESUSDT'];
+        const symbolNames = { CLUSDT: 'CL 原油', BTCUSDT: 'BTC', ETHUSDT: 'ETH', SOLUSDT: 'SOL', PAXGUSDT: 'GOLD', SPXUSDT: 'SPX', NQUSDT: 'NQ', ESUSDT: 'ES' };
+        const indexSymbols = ['SPXUSDT', 'NQUSDT', 'ESUSDT', 'CLUSDT'];
+
+        for (const strat of data.strategies) {
+          for (const symbol of symbols) {
+            // Index/futures: each symbol uses its best-performing strategy
+            // CLUSDT (WTI oil) shows all positive 1h strategies as cards
+            const indexStratMap = { SPXUSDT: 'turtle_breakout', NQUSDT: 'donchian_trend', ESUSDT: 'granville_eth_4h' };
+            const stockIndexSymbols = ['SPXUSDT', 'NQUSDT', 'ESUSDT'];
+            if (stockIndexSymbols.includes(symbol) && strat.id !== indexStratMap[symbol]) continue;
+            // CL: skip only the negative one (macd_ma)
+            const clSkipList = ['macd_ma_optimized'];
+            if (symbol === 'CLUSDT' && clSkipList.includes(strat.id)) continue;
+            if (strat.id === 'dual_st_breakout' && (symbol === 'XAUUSDT' || stockIndexSymbols.includes(symbol))) continue;
+
+            // Skip known-negative crypto combos
+            // After re-optimization (Pionex WTI + per-symbol overrides): only 3 combos remain negative
+            const cryptoSkipList = { ETHUSDT: ['dual_st_breakout'], SOLUSDT: ['macd_ma_optimized', 'dual_st_breakout'] };
+            if (cryptoSkipList[symbol] && cryptoSkipList[symbol].includes(strat.id)) continue;
+
+            if (symbol === 'PAXGUSDT') {
+              // Only show selected strategies for Gold (granville excluded — negative on PAXG)
+              const allowedGoldStrats = ['three_style', 'turtle_breakout', 'dual_st_breakout', 'donchian_trend'];
+              if (!allowedGoldStrats.includes(strat.id)) continue;
+
+              const tf = (strat.id === 'three_style') ? '1h' : '4h';
+              const card = createStrategyCard(strat, symbol, symbolNames[symbol], tf);
+              strategyList.appendChild(card);
+              applyPerformanceToCard(strat.id, symbol, tf, card, perfMap);
+            } else if (symbol === 'CLUSDT') {
+              // CL WTI oil: 1h timeframe outperforms 4h on short data window
+              const card = createStrategyCard(strat, symbol, symbolNames[symbol], '1h');
+              strategyList.appendChild(card);
+              applyPerformanceToCard(strat.id, symbol, '1h', card, perfMap);
+            } else {
+              const card = createStrategyCard(strat, symbol, symbolNames[symbol], '4h');
+              strategyList.appendChild(card);
+              applyPerformanceToCard(strat.id, symbol, '4h', card, perfMap);
+            }
+          }
+        }
+
+        updateTabCounts();
+      } catch (err) {
+        console.error('Failed to load strategies:', err);
+      }
+    }
+
+    // Apply pre-fetched performance data to a card; falls back to live backtest if DB has no data
+    function applyPerformanceToCard(strategyId, symbol, timeframe, card, perfMap) {
+      const key = `${strategyId}_${symbol}_${timeframe}`;
+      const perf = perfMap[key];
+
+      if (perf && perf.totalReturn !== null && perf.totalReturn !== undefined) {
+        // DB hit — fill in immediately with no extra request
+        fillCardStats(strategyId, symbol, timeframe, card, perf);
+      } else {
+        // DB miss (first run or new strategy) — fall back to live backtest
+        runBacktestForCard(strategyId, symbol, card, timeframe);
+      }
+    }
+
+    function fillCardStats(strategyId, symbol, timeframe, card, perf) {
+      const roi = parseFloat(perf.totalReturn);
+      card.dataset.roiPositive = roi >= 0 ? 'true' : 'false';
+
+      const roiEl = document.getElementById(`roi-${strategyId}-${symbol}-${timeframe}`);
+      if (roiEl) {
+        roiEl.textContent = `${roi > 0 ? '+' : ''}${roi.toFixed(1)}%`;
+        roiEl.className = `text-xl font-black ${roi >= 0 ? 'text-primary' : 'text-red-500'} truncate`;
+      }
+      const wrEl = document.getElementById(`winrate-${strategyId}-${symbol}-${timeframe}`);
+      if (wrEl) wrEl.textContent = `${parseFloat(perf.winRate).toFixed(1)}%`;
+
+      const pfEl = document.getElementById(`pf-${strategyId}-${symbol}-${timeframe}`);
+      if (pfEl) {
+        const pf = perf.profitFactor;
+        pfEl.textContent = (pf === null || pf === 'null' || pf === undefined) ? '∞' : Number(pf).toFixed(2);
+      }
+      const trEl = document.getElementById(`trades-${strategyId}-${symbol}-${timeframe}`);
+      if (trEl) trEl.textContent = `${perf.totalTrades}`;
+
+      const barEl = document.getElementById(`bar-${strategyId}-${symbol}-${timeframe}`);
+      if (barEl) barEl.style.width = `${Math.min(parseFloat(perf.winRate), 100)}%`;
+    }
+    function updateTabCounts() {
+      const cards = document.querySelectorAll('.strategy-card');
+      const counts = { all: 0, Basic: 0, Premium: 0, Platinum: 0 };
+
+      cards.forEach(card => {
+        const cat = card.dataset.category;
+        counts.all++;
+        if (counts[cat] !== undefined) counts[cat]++;
+      });
+
+      Object.keys(counts).forEach(key => {
+        const el = document.getElementById(`count-${key}`);
+        if (el) el.textContent = counts[key];
+      });
+    }
+    function createManualSignalCard() {
+      const div = document.createElement('div');
+      div.id = 'manual-signal-card'; // Added ID for visibility control
+      div.className = `strategy-card bg-card-dark rounded-xl border border-indigo-500/50 platinum-gradient overflow-hidden relative flex flex-col shadow-2xl shadow-indigo-500/10 hidden`; // Hidden by default
+      div.dataset.category = 'Platinum';
+      div.dataset.searchText = `human alpha q-signal manual platinum 人工智能 智慧 人工`.toLowerCase();
+
+      div.innerHTML = `
+        <div class="absolute -right-12 top-6 bg-indigo-600 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10">
+          <span class="material-symbols-outlined text-[10px]">psychology</span> 人工智慧精選
+        </div>
+        <div class="p-4 relative z-0 flex flex-col h-full">
+          <div class="mb-4">
+            <span class="text-[10px] font-bold bg-indigo-600 text-white rounded px-1.5 py-0.5 uppercase mb-1 inline-block">Platinum</span>
+            <h3 class="text-xl font-black text-white leading-tight mt-0.5">Q-Signal 人工精選策略 <span class="text-xs text-indigo-400 font-bold ml-1">(測試中)</span> <span class="material-symbols-outlined text-indigo-400 text-xs ml-1" style="font-variation-settings: 'FILL' 1">stars</span></h3>
+            <p class="text-[10px] text-indigo-400/60 mt-0.5">by QuantSignal</p>
+          </div>
+          
+          <!-- Removed manual signal description as requested -->
+
+          <div class="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-4 mb-4 flex flex-col items-center justify-center text-center">
+             <p class="text-[10px] text-indigo-400 uppercase font-black mb-1">累計報酬率 ROI</p>
+             <p class="text-3xl font-black text-primary" id="manual-total-roi">0.0%</p>
+          </div>
+
+          <a href="manual-signals.html" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer mt-auto glow-indigo">
+            🚀 查看精選信號 <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+      `;
+      return div;
+    }
+
+    async function updateManualROIOnCard() {
+      try {
+        const res = await fetch('/api/manual-signals/performance');
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const total = parseFloat(data.totalRoi || 0);
+
+        const card = document.getElementById('manual-signal-card');
+
+        // ONLY SHOW IF PERFORMANCE IS >= 20%
+        if (total >= 20) {
+          if (card) card.classList.remove('hidden');
+          const el = document.getElementById('manual-total-roi');
+          if (el) {
+            el.textContent = `${total > 0 ? '+' : ''}${total.toFixed(2)}%`;
+            el.className = `text-3xl font-black ${total >= 0 ? 'text-primary' : 'text-red-500'}`;
+          }
+        } else {
+          // Keep it hidden if performance is not good enough
+          if (card) card.classList.add('hidden');
+          console.log('Manual Alpha card hidden: Performance below threshold (20%). Current:', total + '%');
+        }
+      } catch (err) { }
+    }
+
+    function createStrategyCard(strat, symbol, symbolShort, timeframe = '4h') {
+      const div = document.createElement('div');
+      const isIndex = ['SPXUSDT', 'NQUSDT', 'ESUSDT'].includes(symbol);
+      const category = isIndex ? 'Platinum' : (strat.category || 'Basic');
+      const isPlatinum = category === 'Platinum';
+      const isPremium = category === 'Premium';
+      const isOptimized = strat.id === 'macd_ma_optimized';
+      const isTurtle = strat.id === 'turtle_breakout';
+      const isDualST = strat.id === 'dual_st_breakout';
+
+      div.className = `strategy-card bg-card-dark rounded-xl border ${isPlatinum ? 'border-indigo-500/50 platinum-gradient' : (isPremium ? 'border-primary/30 premium-gradient' : 'border-border-dark')} overflow-hidden relative flex flex-col`;
+      div.dataset.category = category;
+      div.dataset.roiPositive = 'true'; // Default to true (optimistic)
+      div.dataset.symbol = symbol;
+      div.dataset.symbolShort = symbolShort;
+      div.dataset.stratName = (strat.name || '').toLowerCase();
+      div.dataset.stratId = strat.id;
+      div.dataset.timeframe = timeframe;
+      div.dataset.searchText = `${strat.name} ${symbolShort} ${symbol} ${category} ${timeframe} ${strat.id}`.toLowerCase();
+
+      const badgeClass = isPlatinum
+        ? 'text-[10px] font-bold bg-indigo-600 text-white rounded px-1.5 py-0.5 uppercase mb-1 inline-block'
+        : isPremium
+          ? 'text-[10px] font-bold bg-primary text-background-dark rounded px-1.5 py-0.5 uppercase mb-1 inline-block'
+          : 'text-[10px] font-bold text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 uppercase mb-1 inline-block';
+
+      const authorBadge = isPremium
+        ? `<span class="material-symbols-outlined text-primary text-xs ml-1" style="font-variation-settings: 'FILL' 1">verified</span>`
+        : '';
+
+      // RESTORED MISSING DEFINITION
+      const featuredBadge = (strat.id === 'granville_eth_4h' && (symbol === 'ETHUSDT' || symbol === 'BTCUSDT'))
+        ? `<div class="absolute -right-12 top-6 bg-gradient-to-r from-yellow-600 to-amber-400 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">workspace_premium</span> 葛蘭碧大師</div>`
+        : isOptimized
+          ? `<div class="absolute -right-12 top-6 bg-red-600 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">military_tech</span> 最佳績效</div>`
+          : isTurtle && symbol === 'BTCUSDT'
+            ? `<div class="absolute -right-12 top-6 bg-orange-600 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">local_fire_department</span> 趨勢之王</div>`
+            : strat.id === 'turtle_breakout' && symbol === 'SPXUSDT' && timeframe === '4h'
+              ? `<div class="absolute -right-12 top-6 bg-blue-600 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">show_chart</span> 標普優化</div>`
+              : strat.id === 'donchian_trend' && symbol === 'NQUSDT' && timeframe === '4h'
+                ? `<div class="absolute -right-12 top-6 bg-indigo-600 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">trending_up</span> 那斯達克優化</div>`
+                : strat.id === 'granville_eth_4h' && symbol === 'ESUSDT' && timeframe === '4h'
+                  ? `<div class="absolute -right-12 top-6 bg-violet-600 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">query_stats</span> 期貨優化</div>`
+                  : isDualST
+                  ? `<div class="absolute -right-12 top-6 bg-gradient-to-r from-cyan-600 to-teal-500 text-white text-[9px] font-black py-1 px-12 rotate-45 shadow-lg flex items-center justify-center gap-1 z-10"><span class="material-symbols-outlined text-[10px]">bolt</span> DUAL ST</div>`
+                  : '';
+
+      div.innerHTML = `
+        ${featuredBadge}
+        <div class="p-4 relative z-0 flex flex-col h-full">
+          <div>
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <span class="${badgeClass}">${category}</span>
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-800 rounded px-1.5 py-0.5 uppercase mb-1 inline-block ml-1">${timeframe}</span>
+                <h3 class="text-xl font-bold text-white leading-tight mt-0.5 line-clamp-1" title="${strat.name} (${symbolShort})">${strat.name} <span class="text-slate-500 text-base">(${symbolShort})</span>${isPlatinum ? `<span class="material-symbols-outlined text-indigo-400 text-xs ml-1" style="font-variation-settings: 'FILL' 1">stars</span>` : authorBadge}</h3>
+                ${(isPremium || isPlatinum) ? `<p class="text-[10px] ${isPlatinum ? 'text-indigo-400/60' : 'text-primary/60'} mt-0.5">by ${strat.author || 'QuantSignal'}</p>` : ''}
+              </div>
+            </div>
+
+            <!-- Custom Descriptions for Gold -->
+            <!-- Custom Descriptions for Gold -->
+            ${symbol === 'BTCUSDT' && strat.id === 'granville_eth_4h' ? `<p class="text-[11px] text-amber-500/90 leading-tight mb-4 font-medium border-l-2 border-amber-500 pl-2">特性：針對 BTC 優化的葛蘭碧法則。具備極限乖離過濾器，專注於捕捉主流幣大波段行情。</p>` : ''}
+            ${symbol === 'ETHUSDT' && strat.id === 'granville_eth_4h' ? `<p class="text-[11px] text-primary/90 leading-tight mb-4 font-medium border-l-2 border-primary pl-2">特性：針對 ETH 優化的葛蘭碧法則。旗艦級多空雙向策略，結合動態均線濾鏡，捕捉以太坊強勢波段。</p>` : ''}
+            ${symbol === 'SOLUSDT' && strat.id === 'granville_eth_4h' ? `<p class="text-[11px] text-purple-400/90 leading-tight mb-4 font-medium border-l-2 border-purple-400 pl-2">特性：針對 SOL 優化的葛蘭碧法則。高波動捕手設計，具備專屬風險防護機制，適合捕捉強勢噴發行情。</p>` : ''}
+            ${(symbol === 'XAUUSDT' || symbol === 'XAUTUSDT') && strat.id === 'granville_eth_4h' ? `<p class="text-[11px] text-yellow-500/90 leading-tight mb-4 font-medium border-l-2 border-yellow-500 pl-2">特性：針對黃金(XAUT)優化的葛蘭碧法則。具備多空雙向自動適配機制，專注於捕捉貴金屬避險趨勢與回調。</p>` : ''}
+            
+            ${symbol === 'XAUUSDT' && timeframe === '1h' && strat.id === 'three_style' ? `<p class="text-[11px] text-yellow-500/80 leading-tight mb-4 font-medium italic">特性：短線爆發型。專為黃金日內交易優化，具備極高的反應速度。</p>` : ''}
+            ${symbol === 'XAUUSDT' && timeframe === '4h' && strat.id === 'three_style' ? `<p class="text-[11px] text-yellow-500/80 leading-tight mb-4 font-medium italic">特性：穩健波段型。專注於捕捉黃金長期趨勢，適合長線佈局。</p>` : ''}
+            
+            ${symbol === 'SPXUSDT' && timeframe === '4h' && strat.id === 'turtle_breakout' ? `<p class="text-[11px] text-blue-400/80 leading-tight mb-4 font-medium italic">特性：針對標普 500 (SPX) 優化。海龜突破策略，精準捕捉標普波段行情。</p>` : ''}
+            ${symbol === 'NQUSDT' && timeframe === '4h' && strat.id === 'donchian_trend' ? `<p class="text-[11px] text-indigo-400/80 leading-tight mb-4 font-medium italic">特性：針對那斯達克 100 期貨 (NQ) 優化。唐奇安突破 + ADX 趨勢過濾，專為美股期貨波段設計。</p>` : ''}
+            ${symbol === 'ESUSDT' && timeframe === '4h' && strat.id === 'granville_eth_4h' ? `<p class="text-[11px] text-violet-400/80 leading-tight mb-4 font-medium italic">特性：針對 E-mini S&P 500 期貨 (ES) 優化。葛蘭碧法則動態均線策略，專注強趨勢波段。</p>` : ''}
+            ${symbol === 'CLUSDT' && strat.id === 'dual_ema' ? `<p class="text-[11px] text-orange-400/90 leading-tight mb-4 font-medium border-l-2 border-orange-400 pl-2">特性：主推原油信號。針對 WTI 原油期貨 (CL) 1H 優化，勝率 83% / PF 23.2，趨勢捕捉精準，適合進階會員短線波段。</p>` : ''}
+            
+            ${symbol === 'BTCUSDT' && strat.id === 'dual_st_breakout' ? `<p class="text-[11px] text-cyan-400/90 leading-tight mb-4 font-medium border-l-2 border-cyan-400 pl-2">特性：雙重 SuperTrend 共振確認趨勢方向，唐奇安通道突破精準進場。針對 BTC 穩健波段優化。</p>` : ''}
+            ${symbol === 'ETHUSDT' && strat.id === 'dual_st_breakout' ? `<p class="text-[11px] text-teal-400/90 leading-tight mb-4 font-medium border-l-2 border-teal-400 pl-2">特性：雙 SuperTrend 趨勢共振搭配唐奇安突破。針對 ETH 高 ROI 參數優化，盈虧比極佳。</p>` : ''}
+            ${symbol === 'SOLUSDT' && strat.id === 'dual_st_breakout' ? `<p class="text-[11px] text-emerald-400/90 leading-tight mb-4 font-medium border-l-2 border-emerald-400 pl-2">特性：雙 SuperTrend 共振突破策略。針對 SOL 高波動特性優化，動態追蹤止損。</p>` : ''}
+            
+            ${strat.id === 'ichimoku_cloud' ? `<p class="text-[11px] text-yellow-500/90 leading-tight mb-4 font-medium border-l-2 border-yellow-500 pl-2">特性：一目均衡表雲圖突破系統。結合轉換線與基準線交叉，並以 EMA 200 作為長期趨勢濾網，專注於起漲點捕捉。</p>` : ''}
+            
+            <div class="grid grid-cols-2 gap-2 mb-4">
+              <div class="bg-background-dark/50 p-2 rounded-lg border border-border-dark flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold mb-0.5" id="roi-label-${strat.id}-${symbol}-${timeframe}">總報酬率 ROI (${['SPXUSDT', 'NQUSDT', 'ESUSDT'].includes(symbol) ? '90d' : (timeframe === '1h' ? '45d' : '180d')})</p>
+                <p class="text-xl font-black text-primary truncate" id="roi-${strat.id}-${symbol}-${timeframe}">--</p>
+              </div>
+              <div class="bg-background-dark/50 p-2 rounded-lg border border-border-dark flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold mb-0.5">勝率</p>
+                <p class="text-xl font-bold text-white truncate" id="winrate-${strat.id}-${symbol}-${timeframe}">--</p>
+              </div>
+              <div class="bg-background-dark/50 p-2 rounded-lg border border-border-dark flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold mb-0.5">盈虧比 PF</p>
+                <p class="text-xl font-bold text-white truncate" id="pf-${strat.id}-${symbol}-${timeframe}">--</p>
+              </div>
+              <div class="bg-background-dark/50 p-2 rounded-lg border border-border-dark flex flex-col items-center justify-center text-center">
+                <p class="text-[10px] text-slate-500 uppercase font-bold mb-0.5">交易次數</p>
+                <p class="text-xl font-bold text-white truncate" id="trades-${strat.id}-${symbol}-${timeframe}">--</p>
+              </div>
+            </div>
+          </div>
+          
+          <a href="strategy-detail.html?strategy=${strat.id}&symbol=${symbol}&timeframe=${timeframe}" class="w-full py-3 rounded-xl ${isPremium ? 'bg-primary text-background-dark glow-button' : 'border border-primary text-primary'} font-bold text-sm hover:opacity-90 transition-colors flex items-center justify-center gap-2 cursor-pointer mt-auto">
+            ${isPremium ? '🔥 查看進階 →' : '查看詳情 →'}
+          </a>
+        </div>
+        <div class="h-1.5 w-full ${isPremium ? 'bg-primary/30' : 'bg-primary/20'} absolute bottom-0 left-0"><div class="absolute inset-0 bg-primary h-full opacity-50" style="width: 0%" id="bar-${strat.id}-${symbol}-${timeframe}"></div></div>
+      `;
+      return div;
+    }
+
+    function createPremiumCard(ps) {
+      // ... (omitted) ...
+      return div;
+    }
+
+    async function runBacktestForCard(strategyId, symbol, card, timeframe = '4h') {
+      try {
+        const res = await fetch('/api/backtest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategyId, symbol, timeframe })
+        });
+        const data = await res.json();
+
+        if (data.summary) {
+          const roi = data.summary.totalReturn;
+          card.dataset.roiPositive = roi >= 0 ? 'true' : 'false';
+
+          const roiEl = document.getElementById(`roi-${strategyId}-${symbol}-${timeframe}`);
+          if (roiEl) {
+            roiEl.innerHTML = `${roi > 0 ? '+' : ''}${roi.toFixed(1)}%`;
+            roiEl.className = `text-xl font-black ${roi >= 0 ? 'text-primary' : 'text-red-500'} truncate`;
+          }
+
+          const wrEl = document.getElementById(`winrate-${strategyId}-${symbol}-${timeframe}`);
+          if (wrEl) wrEl.textContent = `${data.summary.winRate}%`;
+
+          const pfEl = document.getElementById(`pf-${strategyId}-${symbol}-${timeframe}`);
+          if (pfEl) {
+            const pf = data.summary.profitFactor;
+            pfEl.textContent = (pf === null || pf === 'null') ? '∞' : Number(pf).toFixed(2);
+          }
+
+          const trEl = document.getElementById(`trades-${strategyId}-${symbol}-${timeframe}`);
+          if (trEl) trEl.textContent = `${data.summary.totalTrades}`;
+
+          const barEl = document.getElementById(`bar-${strategyId}-${symbol}-${timeframe}`);
+          if (barEl) barEl.style.width = `${Math.min(data.summary.winRate, 100)}%`;
+        } else {
+          // API returned but no summary (could be error). 
+          // Decision: Keep visible or Hide? 
+          // Let's Keep visible so user sees card exists but failed data.
+          // No action needed on display.
+        }
+      } catch (err) {
+        console.error('Backtest error:', err);
+        // On error, keep visible (don't hide).
+      }
+    }
+
+    // ── Combined Search + Tab Filter ──────────────────
+    let activeTabFilter = 'all';
+    let searchQuery = '';
+
+    // Alias map for search (Chinese/English synonyms)
+    const searchAliases = {
+      '比特幣': 'btc', '以太坊': 'eth', '黃金': 'gold xau',
+      '索拉納': 'sol', 'solana': 'sol', 'bitcoin': 'btc', 'ethereum': 'eth',
+      '標普': 'spx', '納斯達克': 'nas', '海龜': 'turtle', '葛蘭碧': 'granville',
+      '三刀流': 'three_style', 'macd': 'macd',
+      '雙st': 'dual_st', 'supertrend': 'dual_st', '超級趨勢': 'dual_st', '唐奇安': 'dual_st donchian',
+      '人工': 'human manual', '智慧': 'human manual'
+    };
+
+    function applyFilters() {
+      const noResultEl = document.getElementById('noSearchResults');
+      let visibleCount = 0;
+
+      // Expand search query with aliases
+      let expandedQuery = searchQuery;
+      for (const [alias, target] of Object.entries(searchAliases)) {
+        if (searchQuery.includes(alias)) expandedQuery += ' ' + target;
+      }
+
+      document.querySelectorAll('.strategy-card').forEach(card => {
+        const categoryMatch = (activeTabFilter === 'all' || card.dataset.category === activeTabFilter);
+        const searchText = card.dataset.searchText || '';
+        const searchMatch = !expandedQuery || expandedQuery.split(/\s+/).every(term => searchText.includes(term));
+        const show = categoryMatch && searchMatch;
+        card.style.display = show ? 'flex' : 'none';
+        if (show) visibleCount++;
+      });
+
+      // No results message
+      if (noResultEl) {
+        noResultEl.style.display = visibleCount === 0 ? 'flex' : 'none';
+      }
+    }
+
+    // Tab filtering
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('border-primary', 'text-primary'); b.classList.add('border-transparent', 'text-slate-400'); });
+        btn.classList.add('border-primary', 'text-primary');
+        btn.classList.remove('border-transparent', 'text-slate-400');
+        activeTabFilter = btn.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    // Search input
+    const searchInput = document.getElementById('strategySearch');
+    const searchClear = document.getElementById('searchClear');
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.trim().toLowerCase();
+      searchClear.classList.toggle('hidden', !searchQuery);
+      applyFilters();
+    });
+
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      searchClear.classList.add('hidden');
+      applyFilters();
+      searchInput.focus();
+    });
+
+
+    let lastTickerUpdate = 0;
+    function updatePriceTicker(prices) {
+      // Update Main Oil (CL) Highlight — primary featured asset
+      const oil = prices['CLUSDT'];
+      if (oil) {
+        currentGoldPrice = oil.price; // Re-used var for featured signal ROI calc
+        renderFeaturedGoldSignals(); // Refresh featured UI with new price
+
+        const oilPriceEl = document.getElementById('oilPriceMain');
+        const oilChangeEl = document.getElementById('oilChangeMain');
+        if (oilPriceEl) oilPriceEl.textContent = `$${oil.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        if (oilChangeEl) {
+          const color = oil.change24h >= 0 ? 'text-primary' : 'text-red-500';
+          oilChangeEl.textContent = `${oil.change24h >= 0 ? '+' : ''}${oil.change24h.toFixed(2)}%`;
+          oilChangeEl.className = `text-base font-bold ${color} bg-slate-800/50 px-2 py-0.5 rounded`;
+        }
+      }
+
+      // Update NQ Highlight
+      const nq = prices['NQUSDT'];
+      if (nq) {
+        const nqPriceEl = document.getElementById('nqPriceMain');
+        const nqChangeEl = document.getElementById('nqChangeMain');
+        if (nqPriceEl) nqPriceEl.textContent = `$${nq.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        if (nqChangeEl) {
+          const color = nq.change24h >= 0 ? 'text-indigo-400' : 'text-red-500';
+          nqChangeEl.textContent = `${nq.change24h >= 0 ? '+' : ''}${nq.change24h.toFixed(2)}%`;
+          nqChangeEl.className = `text-xs font-bold ${color}`;
+        }
+      }
+
+      // Throttle Ticker HTML Update to prevent animation reset (Stop)
+      const now = Date.now();
+      if (now - lastTickerUpdate < 30000) return; // Flow for at least 30s
+      lastTickerUpdate = now;
+
+      const container = document.getElementById('priceItems');
+      const featuredPairs = [
+        { symbol: 'BTCUSDT', timeframe: '4h', id: 'granville_eth_4h', label: 'BTC' },
+        { symbol: 'ETHUSDT', timeframe: '4h', id: 'granville_eth_4h', label: 'ETH' },
+        { symbol: 'SOLUSDT', timeframe: '4h', id: 'granville_eth_4h', label: 'SOL' },
+        { symbol: 'PAXGUSDT', timeframe: '4h', id: 'granville_eth_4h', label: 'GOLD' },
+        { symbol: 'PAXGUSDT', timeframe: '1h', id: 'three_blade', label: 'GOLD' },
+        { symbol: 'SPXUSDT', timeframe: '4h', id: 'turtle_breakout', label: 'SPX' },
+        { symbol: 'NQUSDT', timeframe: '4h', id: 'donchian_trend', label: 'NQ' },
+        { symbol: 'ESUSDT', timeframe: '4h', id: 'granville_eth_4h', label: 'ES' },
+      ];
+
+      let itemHtml = '';
+      for (const pair of featuredPairs) {
+        const p = prices[pair.symbol];
+        if (p) {
+          const color = p.change24h >= 0 ? 'text-primary' : 'text-red-500';
+          itemHtml += `<div class="flex items-center gap-2 shrink-0 px-4">
+            <span class="font-bold text-white text-xs">${pair.label}</span>
+            <span class="font-mono text-xs">$${p.price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '--'}</span>
+            <span class="${color} text-[10px] font-bold">${p.change24h >= 0 ? '+' : ''}${p.change24h?.toFixed(2) || '0.00'}%</span>
+          </div>`;
+        }
+      }
+
+      if (itemHtml) {
+        // Double/Triple it for seamless scrolling
+        container.innerHTML = `<div class="flex price-ticker">${itemHtml}${itemHtml}${itemHtml}</div>`;
+      }
+    }
+
+    // Also poll prices via REST
+    async function pollPrices() {
+      try {
+        const res = await fetch('/api/prices/current');
+        const data = await res.json();
+        if (Object.keys(data).length > 0) updatePriceTicker(data);
+      } catch (e) {
+        // Price poll failure is non-critical; WebSocket is the primary source
+      }
+    }
+
+    // Check DB / server status via health endpoint
+    async function checkDbStatus() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        const dbStatus = document.getElementById('dbStatus');
+        const dbDot = document.getElementById('dbStatusDot');
+        const dbText = document.getElementById('dbStatusText');
+
+        if (dbStatus) {
+          dbStatus.classList.remove('hidden');
+          if (data.status === 'ok') {
+            dbDot.classList.replace('bg-red-500', 'bg-primary');
+            dbText.textContent = '已連線';
+            dbStatus.title = '伺服器已連線';
+          } else {
+            dbDot.classList.replace('bg-primary', 'bg-red-500');
+            dbText.textContent = '錯誤';
+          }
+        }
+      } catch (e) {
+        const dbStatus = document.getElementById('dbStatus');
+        if (dbStatus) {
+          dbStatus.classList.remove('hidden');
+          document.getElementById('dbStatusText').textContent = '離線';
+        }
+      }
+    }
+
+    // Init
+    loadStrategies();
+    loadFeaturedGoldSignals();
+    checkDbStatus();
+    setInterval(pollPrices, 10000);
+    setInterval(checkDbStatus, 60000);
+    setInterval(loadFeaturedGoldSignals, 60000);
+  </script>
+  <script>
+    updateHeaderAuth();
+
+    // Auth & UI Updates
+    (async () => {
+      const { user, token } = await getUser();
+      if (user && token) {
+        try {
+          const res = await fetch('/api/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const profile = await res.json();
+          const isAdminUser = profile.role === 'admin' || isAdmin(user);
+
+          // Show admin nav link
+          if (isAdminUser) {
+            const adminLink = document.getElementById('adminNavLink');
+            if (adminLink) {
+              adminLink.classList.remove('hidden');
+              adminLink.classList.add('flex');
+            }
+          }
+
+          // Hide promo banner if already advanced or applied
+          const promoBanner = document.getElementById('promoBanner');
+          if (profile.role !== 'standard' || profile.hasPendingApplication) {
+            if (promoBanner) promoBanner.classList.add('hidden');
+          } else {
+            if (promoBanner) promoBanner.classList.remove('hidden');
+          }
+        } catch (e) { }
+      } else {
+        // Guest mode
+        const promoBanner = document.getElementById('promoBanner');
+        if (promoBanner) promoBanner.classList.remove('hidden');
+      }
+    })();
+  </script>
+  <!-- Footer / Counter -->
+  <footer class="mt-auto py-8 border-t border-border-dark/30 bg-card-dark/20">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full border border-primary/10">
+        <span class="material-symbols-outlined text-sm text-primary">group</span>
+        <span class="text-xs text-slate-400">累計瀏覽人數：</span>
+        <span id="visitorCount" class="text-xs font-bold text-white tracking-widest">---</span>
+      </div>
+      <p class="mt-4 text-[10px] text-slate-600 uppercase tracking-tighter">© 2026 QuantSignal — 版權所有</p>
+    </div>
+  </footer>
+
+
+  <script>
+    // Visitor Counter Fetch
+    async function updateVisitorCount() {
+      try {
+        const res = await fetch('/api/visitor-count');
+        const data = await res.json();
+        const el = document.getElementById('visitorCount');
+        if (el) el.textContent = data.count.toLocaleString();
+      } catch (e) {
+        console.error('Failed to update visitor count');
+      }
+    }
+    updateVisitorCount();
+  </script>
+</body>
+
+</html>

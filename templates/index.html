@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>QuantSignal Clone — 量化交易信號平台</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#EAB308",
+            "accent-red": "#EF4444",
+            "accent-green": "#10B981",
+            "background-dark": "#0a0c0a",
+            "card-dark": "#161d16",
+            "border-dark": "#243324",
+          },
+          fontFamily: { display: ["Inter", "sans-serif"] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+    .material-symbols-outlined { font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24; }
+    .ticker-scroll { animation: scroll 45s linear infinite; }
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .ticker-wrap:hover .ticker-scroll { animation-play-state: paused; }
+  </style>
+</head>
+
+<body class="bg-background-dark text-gray-200">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-background-dark/80 backdrop-blur-md border-b border-border-dark">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary text-3xl">bolt</span>
+        <h1 class="text-xl font-bold tracking-tight">QuantSignal <span class="text-xs text-gray-500 font-normal">Clone</span></h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <div id="dbStatus" class="flex items-center gap-2 text-xs">
+          <span id="dbStatusDot" class="w-2 h-2 rounded-full bg-gray-500"></span>
+          <span id="dbStatusText" class="text-gray-400">連線中...</span>
+        </div>
+        <span id="visitorCount" class="text-xs text-gray-500 hidden sm:inline">訪客 0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Price ticker -->
+  <div class="ticker-wrap bg-card-dark border-b border-border-dark overflow-hidden py-3">
+    <div id="priceItems" class="ticker-scroll flex gap-8 whitespace-nowrap"></div>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 pb-24">
+
+    <!-- 頂部標題 -->
+    <section class="text-center mb-8">
+      <h2 class="text-3xl font-extrabold mb-2">量化交易信號平台</h2>
+      <p class="text-gray-400 text-sm">
+        9 大 AI 策略 × 8 類資產，即時訊號 + 回測績效
+      </p>
+    </section>
+
+    <!-- ═══════════════════ 🆕 我的系統整合區 ═══════════════════ -->
+    <section class="mb-10 bg-gradient-to-br from-primary/5 to-transparent rounded-xl border-2 border-primary/30 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">dashboard</span>
+          我的系統整合
+        </h3>
+        <span id="my-summary-time" class="text-xs text-gray-500">--</span>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+        <div class="bg-card-dark rounded-lg border border-border-dark p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-400">Pionex 三刀流</span>
+            <span class="material-symbols-outlined text-base text-primary">trending_up</span>
+          </div>
+          <div class="text-2xl font-bold" id="sum-pionex-total">--</div>
+          <div class="text-xs mt-1">
+            <span class="text-green-400" id="sum-pionex-long">--</span> /
+            <span class="text-red-400" id="sum-pionex-short">--</span>
+            <span class="text-gray-500 ml-1">多 / 空</span>
+          </div>
+        </div>
+        <div class="bg-card-dark rounded-lg border border-border-dark p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-400">NBA 預測</span>
+            <span class="material-symbols-outlined text-base text-orange-400">sports_basketball</span>
+          </div>
+          <div class="text-2xl font-bold" id="sum-nba-games">--</div>
+          <div class="text-xs mt-1">
+            <span class="text-gray-500">今日場次・勝率</span>
+            <span class="text-green-400 ml-1" id="sum-nba-wr">--%</span>
+          </div>
+        </div>
+        <div class="bg-card-dark rounded-lg border border-border-dark p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-400">Hyperliquid 鯨魚</span>
+            <span class="material-symbols-outlined text-base text-blue-400">water</span>
+          </div>
+          <div class="text-2xl font-bold" id="sum-whale-value">--</div>
+          <div class="text-xs mt-1">
+            <span class="text-gray-500">倉位・PnL</span>
+            <span class="ml-1" id="sum-whale-pnl">--</span>
+          </div>
+        </div>
+        <div class="bg-card-dark rounded-lg border border-border-dark p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-400">社群追蹤</span>
+            <span class="material-symbols-outlined text-base text-purple-400">public</span>
+          </div>
+          <div class="text-2xl font-bold" id="sum-social-total">--</div>
+          <div class="text-xs mt-1 text-gray-500">
+            T <span class="text-primary" id="sum-social-trump">--</span> /
+            B <span class="text-primary" id="sum-social-banini">--</span>
+          </div>
+        </div>
+        <!-- 🆕 Silver 總覽卡 -->
+        <div class="bg-card-dark rounded-lg border border-border-dark p-3">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-400">白銀三市場</span>
+            <span class="material-symbols-outlined text-base text-gray-300">diamond</span>
+          </div>
+          <div class="text-2xl font-bold" id="sum-silver-comex">$--</div>
+          <div class="text-xs mt-1 text-gray-500">
+            上海溢價 <span class="text-orange-400 font-semibold" id="sum-silver-premium">--</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mb-3 overflow-x-auto">
+        <button class="my-tab bg-primary text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap" data-tab="pionex">💎 Pionex 9 bots</button>
+        <button class="my-tab bg-card-dark border border-border-dark px-3 py-1 rounded-full text-sm whitespace-nowrap" data-tab="nba">🏀 NBA 預測</button>
+        <button class="my-tab bg-card-dark border border-border-dark px-3 py-1 rounded-full text-sm whitespace-nowrap" data-tab="whale">🐋 鯨魚持倉</button>
+        <button class="my-tab bg-card-dark border border-border-dark px-3 py-1 rounded-full text-sm whitespace-nowrap" data-tab="social">📰 社群追蹤</button>
+        <button class="my-tab bg-card-dark border border-border-dark px-3 py-1 rounded-full text-sm whitespace-nowrap" data-tab="silver">🥈 白銀三市場</button>
+      </div>
+      <div id="my-tab-content" class="min-h-[200px]"></div>
+    </section>
+    <!-- ═══════════════════ 我的系統整合區 結束 ═══════════════════ -->
+
+    <!-- 人工精選區 -->
+    <section class="bg-card-dark rounded-xl border border-border-dark p-5 mb-8">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">star</span>
+          人工精選策略
+        </h3>
+        <div class="text-right">
+          <div class="text-xs text-gray-400">累計 ROI</div>
+          <div id="manual-total-roi" class="text-2xl font-bold text-primary">--</div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500" id="manual-closed-count">-- 筆已平倉</p>
+    </section>
+
+    <!-- 精選油價訊號（仿照原站）-->
+    <section class="bg-card-dark rounded-xl border border-border-dark p-5 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">WTI 原油期貨 (CL/USDT)</h3>
+        <div class="text-right">
+          <div id="oilPriceMain" class="text-2xl font-bold">$--</div>
+          <div id="oilChangeMain" class="text-sm">--</div>
+        </div>
+      </div>
+      <div id="oilFeaturedSignals" class="space-y-2"></div>
+    </section>
+
+    <!-- 策略清單 -->
+    <section class="mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <h3 class="text-xl font-bold">交易策略信號</h3>
+        <div class="relative">
+          <input id="strategySearch" type="text" placeholder="搜尋策略..."
+            class="bg-card-dark border border-border-dark rounded-lg px-4 py-2 text-sm focus:border-primary focus:ring-primary" />
+        </div>
+      </div>
+
+      <!-- 分類 tab -->
+      <div class="flex gap-2 mb-4 text-sm overflow-x-auto">
+        <button data-cat="all" class="cat-btn active bg-primary text-black px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+          全部 <span id="count-all">0</span>
+        </button>
+        <button data-cat="Basic" class="cat-btn bg-card-dark border border-border-dark px-3 py-1 rounded-full whitespace-nowrap">
+          Basic <span id="count-Basic">0</span>
+        </button>
+        <button data-cat="Premium" class="cat-btn bg-card-dark border border-border-dark px-3 py-1 rounded-full whitespace-nowrap">
+          Premium <span id="count-Premium">0</span>
+        </button>
+        <button data-cat="Platinum" class="cat-btn bg-card-dark border border-border-dark px-3 py-1 rounded-full whitespace-nowrap">
+          Platinum <span id="count-Platinum">0</span>
+        </button>
+        <button data-cat="Trend" class="cat-btn bg-card-dark border border-border-dark px-3 py-1 rounded-full whitespace-nowrap">
+          Trend <span id="count-Trend">0</span>
+        </button>
+      </div>
+
+      <div id="strategyList" class="grid gap-3 md:grid-cols-2"></div>
+      <p id="noSearchResults" class="hidden text-center text-gray-500 py-8">沒有符合的策略</p>
+    </section>
+
+    <!-- API clone 說明 -->
+    <section class="bg-card-dark rounded-xl border border-border-dark p-5 mb-8 text-sm">
+      <h3 class="font-semibold text-primary mb-3">🔧 這是複製版</h3>
+      <div class="text-gray-400 space-y-1">
+        <p>原版：<code class="text-xs">https://q-signals-production.up.railway.app/</code></p>
+        <p>此複製版走本地 Flask 後端，資料初始化來自原站快照。</p>
+        <p>即時價格走 Pionex 公開 API（無需驗證）。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-background-dark/95 backdrop-blur-md border-t border-border-dark z-40">
+    <div class="max-w-6xl mx-auto px-4 py-2 flex justify-around items-center">
+      <a href="/" class="flex flex-col items-center text-primary">
+        <span class="material-symbols-outlined">home</span>
+        <span class="text-xs">首頁</span>
+      </a>
+      <a href="/api/strategies" class="flex flex-col items-center text-gray-400 hover:text-primary">
+        <span class="material-symbols-outlined">analytics</span>
+        <span class="text-xs">API</span>
+      </a>
+      <a href="/api/prices/current" class="flex flex-col items-center text-gray-400 hover:text-primary">
+        <span class="material-symbols-outlined">trending_up</span>
+        <span class="text-xs">價格</span>
+      </a>
+      <a href="/api/health" class="flex flex-col items-center text-gray-400 hover:text-primary">
+        <span class="material-symbols-outlined">health_and_safety</span>
+        <span class="text-xs">狀態</span>
+      </a>
+    </div>
+  </nav>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
