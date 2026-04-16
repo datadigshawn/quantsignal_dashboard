@@ -154,6 +154,44 @@ def load_strategies_bundle() -> dict:
     return bundle
 
 
+def load_sport_edge() -> dict:
+    """整合 sportWeb odds + edge_detector 結果."""
+    sportweb = AUTOBOT_ROOT / "sportWeb"
+    odds_file = sportweb / "data" / "latest_odds.json"
+    out = {"error": None, "odds_games": [], "edges": []}
+
+    if not odds_file.exists():
+        out["error"] = "no latest_odds.json"
+        return out
+
+    try:
+        odds_data = json.loads(odds_file.read_text(encoding="utf-8"))
+        out["fetched_at"] = odds_data.get("fetched_at")
+        out["odds_games"] = odds_data.get("games", [])
+    except Exception as e:
+        out["error"] = f"parse odds: {e}"
+        return out
+
+    # 呼叫 edge_detector 取最新 edge
+    py = sportweb / ".venv" / "bin" / "python"
+    det = sportweb / "src" / "edge_detector.py"
+    if py.exists() and det.exists():
+        try:
+            import subprocess
+            r = subprocess.run(
+                [str(py), str(det), "--json", "--min-edge", "0.0"],
+                capture_output=True, text=True, timeout=15,
+                cwd=str(sportweb),
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                res = json.loads(r.stdout)
+                out["edges"] = res.get("edges", [])
+                out["min_edge"] = res.get("min_edge")
+        except Exception as e:
+            out["edge_error"] = str(e)
+    return out
+
+
 def build_snapshot() -> dict:
     return {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -161,6 +199,7 @@ def build_snapshot() -> dict:
         "nba": load_nba(),
         "social": load_social(),
         "silver": load_silver(),
+        "sport_edge": load_sport_edge(),
         "strategies_bundle": load_strategies_bundle(),
     }
 
@@ -211,6 +250,9 @@ def main():
     sl = snap["silver"]
     if sl.get("comex"):
         print(f"  silver: COMEX ${sl['comex']}  上海 ${sl['shanghai']}  實物 ${sl['physical']}")
+    se = snap.get("sport_edge", {})
+    if se.get("odds_games"):
+        print(f"  sport_edge: {len(se['odds_games'])} odds · {len(se.get('edges', []))} edges")
 
     if args.dry_run:
         print(f"\n[dry-run] snapshot 已存在 {tmp}")

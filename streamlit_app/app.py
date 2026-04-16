@@ -205,7 +205,9 @@ try:
     social = snap.get("social", {}).get("trackers", {})
     silver = snap.get("silver", {})
 
-    c1, c2, c3, c4 = st.columns(4)
+    sport = snap.get("sport_edge", {})
+
+    c1, c2, c3, c4, c5 = st.columns(5)
     # Pionex
     longs  = sum(1 for b in pionex.get("bots", []) if b["direction"] == "LONG")
     shorts = sum(1 for b in pionex.get("bots", []) if b["direction"] == "SHORT")
@@ -224,10 +226,20 @@ try:
                   f"上海溢價 {sh_prem:+.1f}%" if sh_prem is not None else None)
     else:
         c4.metric("🥈 白銀", "--", None)
+    # Sport Edge
+    sport_edges = sport.get("edges", [])
+    positive_edges = [e for e in sport_edges if e.get("edge", 0) > 0]
+    strong_edges = [e for e in sport_edges if e.get("edge", 0) >= 0.05]
+    c5.metric(
+        "🎯 運彩 Edge",
+        f"{len(positive_edges)} 個",
+        f"{len(strong_edges)} 個 >5%" if strong_edges else f"{len(sport.get('odds_games', []))} 場賠率",
+    )
 
     # ───── Tabs ─────
-    tab_py, tab_nba, tab_whale, tab_social, tab_silver, tab_strat = st.tabs([
-        "💎 Pionex bots", "🏀 NBA 預測", "🐋 鯨魚持倉", "📰 社群追蹤", "🥈 白銀三市場", "📊 策略績效"
+    tab_py, tab_nba, tab_whale, tab_social, tab_silver, tab_sport, tab_strat = st.tabs([
+        "💎 Pionex bots", "🏀 NBA 預測", "🐋 鯨魚持倉", "📰 社群追蹤",
+        "🥈 白銀三市場", "🎯 運彩 Edge", "📊 策略績效"
     ])
 
     # === Pionex ===
@@ -388,6 +400,95 @@ try:
                 st.markdown(f"- {ins}")
 
             st.caption(f"最後更新: {silver.get('timestamp', '--')} · silverTracker log")
+
+    # === 運彩 Edge（sportWeb + autobots_NBA 比對）===
+    with tab_sport:
+        sport = snap.get("sport_edge", {})
+        if sport.get("error") and not sport.get("odds_games"):
+            st.warning(f"⚠️ 尚無資料：{sport['error']}")
+            st.caption("sportWeb fetcher 每小時 :20 自動執行。可用：`launchctl start com.sportweb.fetcher`")
+        else:
+            edges = sport.get("edges", [])
+            games = sport.get("odds_games", [])
+
+            # 上排統計
+            sc1, sc2, sc3 = st.columns(3)
+            sc1.metric("可投注場次", len(games))
+            sc2.metric("Edge > 0", sum(1 for e in edges if e.get("edge", 0) > 0))
+            sc3.metric("Edge > 5%", sum(1 for e in edges if e.get("edge", 0) >= 0.05))
+
+            st.markdown("---")
+
+            # Edge 清單
+            positive_edges = [e for e in edges if e.get("edge", 0) > 0]
+            if not positive_edges:
+                st.info("目前無邊際機會（模型跟市場看法一致）")
+            else:
+                st.subheader(f"🎯 偵測到 {len(positive_edges)} 個邊際機會")
+                for i, e in enumerate(positive_edges[:8], 1):
+                    edge_pct = e.get("edge", 0) * 100
+                    roi_pct = e.get("expected_roi", 0) * 100
+                    kelly_pct = e.get("kelly", 0) * 100
+                    model_pct = e.get("model_prob", 0) * 100
+                    market_pct = e.get("market_prob", 0) * 100
+                    extreme = kelly_pct > 50
+
+                    side_color = "#10B981" if e.get("side") == "home" else "#EF4444"
+                    side_tag = e.get("side", "").upper()
+                    warn = '<span style="background:rgba(239,68,68,.3);color:#ff88aa;border:1px solid #EF4444;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px">⚠ 極端</span>' if extreme else ''
+
+                    st.markdown(f"""
+                    <div class="bigcard" style="margin-bottom:10px">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <div>
+                          <span style="color:#88a8c8;font-size:12px">#{i}</span>
+                          <span style="font-size:17px;font-weight:900;color:#fff;margin-left:8px">{e.get('picked_team', '')}</span>
+                          <span style="background:{side_color}33;border:1px solid {side_color};color:{side_color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;margin-left:6px">{side_tag}</span>
+                          {warn}
+                        </div>
+                        <div style="text-align:right">
+                          <div style="font-family:monospace;font-size:20px;font-weight:900;color:#EAB308">+{edge_pct:.1f}%</div>
+                          <div style="font-size:11px;color:#88a8c8">ROI {roi_pct:+.1f}%</div>
+                        </div>
+                      </div>
+                      <div style="color:#aac0d6;font-size:13px;margin-bottom:8px">
+                        {e.get('away', '')} @ {e.get('home', '')}
+                      </div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
+                        <div>
+                          <div style="color:#88a8c8">模型勝率</div>
+                          <div style="font-family:monospace;font-size:15px;font-weight:800;color:#10B981">{model_pct:.1f}%</div>
+                        </div>
+                        <div>
+                          <div style="color:#88a8c8">市場隱含</div>
+                          <div style="font-family:monospace;font-size:15px;font-weight:800;color:#EAB308">{market_pct:.1f}%</div>
+                        </div>
+                        <div>
+                          <div style="color:#88a8c8">賠率 / Kelly</div>
+                          <div style="font-family:monospace;font-size:15px;font-weight:800;color:#fff">{e.get('odds', 0):.2f} <span style="color:#88a8c8;font-size:11px">/ {kelly_pct:.1f}%</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            # 原始 odds
+            if games:
+                st.markdown("---")
+                st.subheader(f"📊 當前 odds ({len(games)} 場)")
+                rows = []
+                for g in games:
+                    ml = g.get("moneyline") or {}
+                    rows.append({
+                        "比賽": f"{g.get('away', '')} @ {g.get('home', '')}",
+                        "開賽": g.get("start_time", "")[:19] if g.get("start_time") else "--",
+                        "客勝賠率": ml.get("away", "--"),
+                        "主勝賠率": ml.get("home", "--"),
+                    })
+                if rows:
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+            st.caption(f"🕐 fetched: {sport.get('fetched_at', '--')} · 來源：台灣運彩 /services/content/get")
+            st.caption("💡 Kelly > 50% 標記「極端」— 實盤建議人工複查模型預測")
 
     # === 策略績效 ===
     with tab_strat:
