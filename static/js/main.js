@@ -501,9 +501,121 @@ async function renderTabSilver() {
   } catch (e) { c.innerHTML = `<p class="text-red-400 text-sm">失敗: ${e}</p>`; }
 }
 
+async function renderTabSportEdge() {
+  const c = $("#my-tab-content");
+  c.innerHTML = '<p class="text-gray-500 text-sm">載入中 sportWeb + edge_detector...</p>';
+  try {
+    const d = await fetch("/api/my/sport_edge").then(r => r.json());
+    if (d.error && !d.odds_games) {
+      c.innerHTML = `
+        <div class="bigcard" style="border-color:#EF4444">
+          <b style="color:#EF4444">⚠️ 尚無資料</b>
+          <p style="margin-top:8px;color:#88a8c8">${d.error}</p>
+          <p style="margin-top:8px;color:#88a8c8;font-size:12px">
+            sportWeb fetcher 排程每小時 :20 自動執行。<br>
+            手動觸發：<code>launchctl start com.sportweb.fetcher</code>
+          </p>
+        </div>`;
+      return;
+    }
+
+    const edges = d.edges || [];
+    const games = d.odds_games || [];
+    const ts = d.fetched_at || '';
+
+    // Edges 區塊
+    let edgesHtml = '';
+    if (edges.length === 0) {
+      edgesHtml = `<p class="text-gray-500 text-sm">目前無邊際機會（模型跟市場看法一致）</p>`;
+    } else {
+      edgesHtml = edges.slice(0, 5).map((e, i) => {
+        const edgePct = (e.edge * 100).toFixed(1);
+        const roiPct = (e.expected_roi * 100).toFixed(1);
+        const kellyPct = (e.kelly * 100).toFixed(1);
+        const modelPct = (e.model_prob * 100).toFixed(1);
+        const marketPct = (e.market_prob * 100).toFixed(1);
+        // 超高 Kelly (>50%) 算危險信號
+        const extreme = e.kelly > 0.5;
+        const warn = extreme ? '<span class="chip" style="background:rgba(239,68,68,.3);color:#ff88aa;border:1px solid #EF4444;margin-left:6px">⚠ 極端</span>' : '';
+        return `
+        <div class="bigcard" style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+              <span style="font-size:13px;color:#88a8c8">#${i+1}</span>
+              <span style="font-size:16px;font-weight:900;color:#fff;margin-left:8px">${e.picked_team}</span>
+              <span class="px-2 py-0.5 rounded text-xs font-bold bg-${e.side === "home" ? "green" : "red"}-500/20 text-${e.side === "home" ? "green" : "red"}-400 ml-2">${e.side.toUpperCase()}</span>
+              ${warn}
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:monospace;font-size:20px;font-weight:900;color:#EAB308">
+                Edge +${edgePct}%
+              </div>
+              <div style="font-size:11px;color:#88a8c8">ROI ${roiPct}%</div>
+            </div>
+          </div>
+          <div style="color:#aac0d6;font-size:13px;margin-bottom:8px">
+            ${e.away} @ ${e.home}
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
+            <div>
+              <div style="color:#88a8c8">模型勝率</div>
+              <div style="font-family:monospace;font-size:16px;font-weight:800;color:#10B981">${modelPct}%</div>
+            </div>
+            <div>
+              <div style="color:#88a8c8">市場隱含</div>
+              <div style="font-family:monospace;font-size:16px;font-weight:800;color:#EAB308">${marketPct}%</div>
+            </div>
+            <div>
+              <div style="color:#88a8c8">賠率 / Kelly</div>
+              <div style="font-family:monospace;font-size:16px;font-weight:800;color:#fff">
+                ${e.odds} <span style="color:#88a8c8;font-size:12px">/ ${kellyPct}%</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    // Odds 原始資料
+    let oddsHtml = games.map(g => {
+      const ml = g.moneyline || {};
+      return `
+        <div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #243324">
+          <span style="color:#aac0d6">${g.away} @ ${g.home}</span>
+          <span style="font-family:monospace;color:#fff">
+            ${(ml.away || '--').toFixed ? ml.away.toFixed(2) : ml.away} / ${(ml.home || '--').toFixed ? ml.home.toFixed(2) : ml.home}
+          </span>
+        </div>`;
+    }).join("");
+
+    c.innerHTML = `
+      <div style="color:#88a8c8;font-size:12px;margin-bottom:12px">
+        🕐 fetched: ${ts} · 來源：台灣運彩 /services/content/get · fetcher launchd :20 / edge :35
+      </div>
+
+      <h4 style="color:#EAB308;font-size:16px;font-weight:800;margin-bottom:8px">
+        🎯 偵測到 ${edges.length} 個邊際機會
+      </h4>
+      ${edgesHtml}
+
+      <h4 style="color:#EAB308;font-size:16px;font-weight:800;margin-top:20px;margin-bottom:8px">
+        📊 當前 odds (${games.length} 場比賽)
+      </h4>
+      <div class="bigcard" style="padding:8px">${oddsHtml || '<p style="color:#88a8c8;padding:8px">尚無資料</p>'}</div>
+
+      <p style="color:#788;font-size:11px;margin-top:12px">
+        💡 Kelly > 50% 標記「極端」— 實盤建議人工複查模型預測，避免過度下注
+      </p>
+    `;
+  } catch (e) {
+    c.innerHTML = `<p class="text-red-400 text-sm">載入失敗: ${e}</p>`;
+  }
+}
+
 const MY_TAB_RENDERERS = {
   pionex: renderTabPionex, nba: renderTabNBA, whale: renderTabWhale,
   social: renderTabSocial, silver: renderTabSilver,
+  sport_edge: renderTabSportEdge,
 };
 
 function bindMyTabs() {

@@ -412,6 +412,48 @@ def api_my_social():
     return jsonify(result)
 
 
+# ── 運彩 Edge（NBA）─────────────────────────────────────────
+@app.route("/api/my/sport_edge")
+def api_my_sport_edge():
+    """讀 sportWeb 最新 odds + 跑 edge_detector，回傳 edge 清單。"""
+    sportweb_dir = AUTOBOT_ROOT / "sportWeb"
+    odds_file = sportweb_dir / "data" / "latest_odds.json"
+
+    if not odds_file.exists():
+        return jsonify({"error": "no odds data (sportWeb fetcher 未跑過)"}), 200
+
+    # 讀最新 odds
+    try:
+        odds_data = json.loads(odds_file.read_text())
+    except Exception as e:
+        return jsonify({"error": f"parse odds: {e}"}), 200
+
+    # 直接呼叫 edge_detector 取結果
+    import subprocess
+    python_bin = sportweb_dir / ".venv" / "bin" / "python"
+    if not python_bin.exists():
+        return jsonify({"error": "sportWeb venv not found"}), 200
+
+    try:
+        r = subprocess.run(
+            [str(python_bin), str(sportweb_dir / "src" / "edge_detector.py"),
+             "--json", "--min-edge", "0.0"],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(sportweb_dir),
+        )
+        edges_result = json.loads(r.stdout) if r.returncode == 0 and r.stdout else {"edges": [], "count": 0}
+    except Exception as e:
+        edges_result = {"error": str(e), "edges": [], "count": 0}
+
+    return jsonify({
+        "fetched_at": odds_data.get("fetched_at"),
+        "odds_games": odds_data.get("games", []),
+        "edges": edges_result.get("edges", []),
+        "edge_count": edges_result.get("count", 0),
+        "updated_at": datetime.now().isoformat(),
+    })
+
+
 # ── 統一總覽 ──────────────────────────────────────────────────
 @app.route("/api/my/summary")
 def api_my_summary():
@@ -468,6 +510,19 @@ def api_my_summary():
                 }
     except Exception:
         summary["silver"] = {"error": True}
+
+    # Sport Edge（NBA 運彩）
+    try:
+        odds_file = AUTOBOT_ROOT / "sportWeb" / "data" / "latest_odds.json"
+        if odds_file.exists():
+            d = json.loads(odds_file.read_text())
+            games = d.get("games", [])
+            summary["sport_edge"] = {
+                "games": len(games),
+                "last_fetched": d.get("fetched_at", ""),
+            }
+    except Exception:
+        summary["sport_edge"] = {"error": True}
 
     summary["generated_at"] = datetime.now().isoformat()
     return jsonify(summary)
