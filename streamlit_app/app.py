@@ -591,6 +591,102 @@ try:
                 if rows:
                     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
+            # 歷史回測績效
+            bt = sport.get("backtest") or {}
+            if bt.get("resolved", 0) > 0:
+                st.markdown("---")
+                st.subheader("📈 Edge 歷史回測")
+                bc1, bc2, bc3, bc4 = st.columns(4)
+                bc1.metric("已驗證", f"{bt['resolved']} 筆",
+                           delta=f"共 {bt['total']} 筆")
+                wr = bt.get("win_rate", 0)
+                wr_color = "normal" if wr >= 50 else "inverse"
+                bc2.metric("勝率", f"{wr:.1f}%",
+                           delta=f"{bt.get('won',0)}W {bt.get('lost',0)}L",
+                           delta_color=wr_color)
+                tp = bt.get("total_profit", 0)
+                bc3.metric("累計損益", f"${tp:+.2f}",
+                           delta=f"每注 ROI {bt.get('avg_roi',0)*100:+.1f}%",
+                           delta_color="normal" if tp >= 0 else "inverse")
+                bc4.metric("待驗證", f"{bt['total'] - bt['resolved']} 筆")
+
+                # 按類型
+                by_type = bt.get("by_type", {})
+                if by_type:
+                    st.markdown("**按類型**")
+                    type_icons = {"moneyline": "🎰 獨贏", "spread": "📐 讓分", "total": "📊 大小"}
+                    type_cols = st.columns(len(by_type))
+                    for col, (etype, stats) in zip(type_cols, by_type.items()):
+                        with col:
+                            lbl = type_icons.get(etype, etype)
+                            w = stats.get("wins", 0)
+                            n = stats.get("count", 0)
+                            wr_val = stats.get("win_rate", 0)
+                            pft = stats.get("total_profit", 0)
+                            st.markdown(f"""
+                            <div style="background:#121826;border:1px solid #1e293b;border-radius:8px;padding:12px;text-align:center">
+                              <div style="font-size:11px;color:#88a8c8">{lbl}</div>
+                              <div style="font-family:monospace;font-size:20px;font-weight:900;color:{'#10B981' if wr_val>=50 else '#EF4444'}">{wr_val:.0f}%</div>
+                              <div style="font-size:11px;color:#88a8c8">{w}W/{n-w}L · ${pft:+.1f}</div>
+                            </div>""", unsafe_allow_html=True)
+
+                # Edge 大小分層
+                by_bucket = bt.get("by_bucket", [])
+                if by_bucket and any(b.get("count", 0) > 0 for b in by_bucket):
+                    st.markdown("**Edge 大小 vs 實際勝率（模型校準）**")
+                    bk_rows = []
+                    for b in by_bucket:
+                        if b["count"] == 0:
+                            continue
+                        bk_rows.append({
+                            "Edge 區間": b["label"],
+                            "筆數": b["count"],
+                            "勝率": f"{b['win_rate']:.0f}%",
+                            "損益": f"${b['profit']:+.1f}",
+                        })
+                    if bk_rows:
+                        st.dataframe(pd.DataFrame(bk_rows), use_container_width=True, hide_index=True)
+
+                # 校準曲線
+                cal = bt.get("calibration", [])
+                if cal and any(c.get("count", 0) > 0 for c in cal):
+                    st.markdown("**模型信心 vs 實際勝率（校準檢驗）**")
+                    cal_rows = []
+                    for c in cal:
+                        if c["count"] == 0:
+                            continue
+                        cal_rows.append({
+                            "模型機率區間": c["label"],
+                            "筆數": c["count"],
+                            "平均模型機率": f"{c['avg_model_prob']:.0f}%",
+                            "實際勝率": f"{c['actual_wr']:.0f}%",
+                            "差距": f"{c['actual_wr'] - c['avg_model_prob']:+.0f}%",
+                        })
+                    if cal_rows:
+                        st.dataframe(pd.DataFrame(cal_rows), use_container_width=True, hide_index=True)
+                    st.caption("💡 差距接近 0% = 模型校準良好；正值 = 模型低估（保守）；負值 = 模型高估（過度自信）")
+
+                # 最近已解析
+                recent = bt.get("recent", [])
+                if recent:
+                    st.markdown("**最近已驗證 Edge**")
+                    recent_rows = []
+                    for r in recent[:10]:
+                        symbol = "✅" if r["bet_won"] else "❌"
+                        recent_rows.append({
+                            "結果": symbol,
+                            "類型": {"moneyline": "🎰", "spread": "📐", "total": "📊"}.get(r["edge_type"], "?"),
+                            "推薦": r["picked_team"],
+                            "Edge": f"+{r['edge_pct']:.1f}%",
+                            "模型": f"{r['model_prob']:.0f}%",
+                            "市場": f"{r['market_prob']:.0f}%",
+                            "損益": f"${r['actual_profit']:+.2f}",
+                        })
+                    st.dataframe(pd.DataFrame(recent_rows), use_container_width=True, hide_index=True)
+            elif bt.get("total", 0) > 0:
+                st.markdown("---")
+                st.info(f"📈 已累積 {bt['total']} 筆 edge 訊號，待比賽結束後自動驗證。")
+
             st.caption(f"🕐 fetched: {sport.get('fetched_at', '--')} · 來源：台灣運彩 /services/content/get (event-level)")
             st.caption("💡 Kelly > 50% 標記「極端」— 讓分σ=12pts · 大小σ=18pts · 實盤建議人工複查")
 
