@@ -63,6 +63,7 @@ def load_nba() -> dict:
             "games": d.get("games", []),
             "edges": d.get("edges", []),
             "backtest": d.get("backtest", {}),
+            "playoff_bracket": d.get("playoff_bracket", {}),
         }
     except Exception as e:
         return {"error": str(e)}

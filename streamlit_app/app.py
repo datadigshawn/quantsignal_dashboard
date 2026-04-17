@@ -301,6 +301,76 @@ try:
                 </div>""", unsafe_allow_html=True)
                 st.markdown("---")
 
+        # Bracket compact
+        bk = nba.get("playoff_bracket", {})
+        if bk and not bk.get("error") and bk.get("west"):
+            st.markdown("---")
+            st.markdown("#### 🏆 季後賽版面")
+            st.caption(f"Monte Carlo n={bk.get('n_sims', 0):,} · {(bk.get('generated_at','') or '').replace('T',' ')}")
+            f = bk.get("finals", {})
+            if f:
+                fw, fe = f.get("west", {}), f.get("east", {})
+                w_wins = (fw.get("advance_prob", 0) >= fe.get("advance_prob", 0))
+                st.markdown(f"""
+                <div style="text-align:center;border:2px solid #EAB308;border-radius:12px;padding:16px;
+                     background:linear-gradient(135deg,rgba(234,179,8,.08),transparent);margin:8px 0;">
+                  <div style="color:#EAB308;font-size:11px;letter-spacing:3px;font-weight:700;margin-bottom:10px;">★ TOTAL FINALS ★</div>
+                  <div style="display:flex;justify-content:center;gap:40px;">
+                    <div style="{'color:#10B981;font-weight:900' if w_wins else 'color:#88a8c8'}">
+                      <div style="font-size:14px">🏆 WEST #{fw.get('seed','?')}</div>
+                      <div style="font-size:28px;font-family:monospace;font-weight:900">{fw.get('abbrev','?')}</div>
+                      <div style="font-size:18px;font-family:monospace">{fw.get('advance_prob',0):.1f}%</div>
+                    </div>
+                    <div style="color:#EAB308;font-size:20px;padding-top:22px">VS</div>
+                    <div style="{'color:#10B981;font-weight:900' if not w_wins else 'color:#88a8c8'}">
+                      <div style="font-size:14px">🏆 EAST #{fe.get('seed','?')}</div>
+                      <div style="font-size:28px;font-family:monospace;font-weight:900">{fe.get('abbrev','?')}</div>
+                      <div style="font-size:18px;font-family:monospace">{fe.get('advance_prob',0):.1f}%</div>
+                    </div>
+                  </div>
+                  <div style="color:#88a8c8;font-size:11px;margin-top:8px;font-family:monospace">
+                    Elo {fw.get('elo','?')} vs {fe.get('elo','?')} · 預期 {f.get('expected_games','?')} 場
+                  </div>
+                </div>""", unsafe_allow_html=True)
+
+            # Conference Finals
+            wcol, ecol = st.columns(2)
+            for col, conf, label in [(wcol, bk["west"], "◤ 西區冠軍賽"), (ecol, bk["east"], "◢ 東區冠軍賽")]:
+                with col:
+                    for m in conf.get("conf_finals", []):
+                        top, bot = m["top"], m["bot"]
+                        tw = top["advance_prob"] >= bot["advance_prob"]
+                        st.markdown(f"""
+                        <div style="background:#121826;border:1px solid #1e293b;border-radius:8px;padding:10px;margin:4px 0;">
+                          <div style="font-size:10px;color:#EAB308;font-weight:700;letter-spacing:2px;margin-bottom:6px">{label}</div>
+                          <div style="{'color:#10B981;font-weight:700' if tw else 'color:#88a8c8'};font-size:13px">#{top['seed']} {top['abbrev']} <span style="font-family:monospace;float:right">{top['advance_prob']:.1f}%</span></div>
+                          <div style="{'color:#10B981;font-weight:700' if not tw else 'color:#88a8c8'};font-size:13px">#{bot['seed']} {bot['abbrev']} <span style="font-family:monospace;float:right">{bot['advance_prob']:.1f}%</span></div>
+                          <div style="font-size:9px;color:#64748b;margin-top:6px;font-family:monospace">Elo {top['elo']} vs {bot['elo']} · {m.get('expected_games','?')} 場</div>
+                        </div>""", unsafe_allow_html=True)
+
+            # R1 matchups as a compact grid
+            with st.expander(f"展開首輪 & 準決賽（{len(bk['west']['r1'])+len(bk['east']['r1'])+len(bk['west']['r2'])+len(bk['east']['r2'])} 場）"):
+                for round_label, round_key in [("R2 準決賽", "r2"), ("R1 首輪", "r1")]:
+                    st.markdown(f"**{round_label}**")
+                    wc, ec = st.columns(2)
+                    for col, conf_data, conf_label in [(wc, bk["west"], "西"), (ec, bk["east"], "東")]:
+                        with col:
+                            for m in conf_data.get(round_key, []):
+                                top, bot = m["top"], m["bot"]
+                                tw = top["advance_prob"] >= bot["advance_prob"]
+                                star_top = m["top"].get("star", {})
+                                star_bot = m["bot"].get("star", {})
+                                st_top = f'★ {star_top["name"]} ({star_top.get("status","Healthy")})' if star_top.get("name") else ""
+                                st_bot = f'★ {star_bot["name"]} ({star_bot.get("status","Healthy")})' if star_bot.get("name") else ""
+                                st.markdown(f"""
+                                <div style="background:#121826;border:1px solid #1e293b;border-radius:6px;padding:8px;margin:3px 0;font-size:12px;">
+                                  <div style="{'color:#10B981;font-weight:700' if tw else 'color:#88a8c8'}">#{top['seed']} {top['abbrev']} <span style="font-family:monospace;float:right">{top['advance_prob']:.1f}%</span></div>
+                                  <div style="{'color:#10B981;font-weight:700' if not tw else 'color:#88a8c8'}">#{bot['seed']} {bot['abbrev']} <span style="font-family:monospace;float:right">{bot['advance_prob']:.1f}%</span></div>
+                                  <div style="font-size:9px;color:#64748b;margin-top:4px;font-family:monospace">{m.get('expected_games','?')}場 · Elo {top['elo']} vs {bot['elo']}</div>
+                                  <div style="font-size:9px;color:#94a3b8;margin-top:2px">{st_top}</div>
+                                  <div style="font-size:9px;color:#94a3b8">{st_bot}</div>
+                                </div>""", unsafe_allow_html=True)
+
     # === Whale ===
     with tab_whale:
         st.caption(f"錢包 `{WHALE_WALLET[:10]}...{WHALE_WALLET[-8:]}` · 即時 Hyperliquid API")
@@ -411,31 +481,60 @@ try:
             edges = sport.get("edges", [])
             games = sport.get("odds_games", [])
 
-            # 上排統計
-            sc1, sc2, sc3 = st.columns(3)
+            # 分類統計
+            ml_edges = [e for e in edges if e.get("edge_type", "moneyline") == "moneyline" and e.get("edge", 0) > 0]
+            sp_edges = [e for e in edges if e.get("edge_type") == "spread" and e.get("edge", 0) > 0]
+            tt_edges = [e for e in edges if e.get("edge_type") == "total" and e.get("edge", 0) > 0]
+            sc1, sc2, sc3, sc4 = st.columns(4)
             sc1.metric("可投注場次", len(games))
-            sc2.metric("Edge > 0", sum(1 for e in edges if e.get("edge", 0) > 0))
-            sc3.metric("Edge > 5%", sum(1 for e in edges if e.get("edge", 0) >= 0.05))
+            sc2.metric("🎰 獨贏 Edge", len(ml_edges))
+            sc3.metric("📐 讓分 Edge", len(sp_edges))
+            sc4.metric("📊 大小 Edge", len(tt_edges))
 
             st.markdown("---")
 
+            # Edge type icons / colors
+            _type_icons = {"moneyline": "🎰", "spread": "📐", "total": "📊"}
+            _type_labels = {"moneyline": "獨贏", "spread": "讓分", "total": "大小"}
+            _side_colors = {"home": "#10B981", "away": "#EF4444", "over": "#60A5FA", "under": "#A78BFA"}
+
             # Edge 清單
-            positive_edges = [e for e in edges if e.get("edge", 0) > 0]
+            positive_edges = sorted(
+                [e for e in edges if e.get("edge", 0) > 0],
+                key=lambda x: x.get("edge", 0), reverse=True,
+            )
             if not positive_edges:
                 st.info("目前無邊際機會（模型跟市場看法一致）")
             else:
                 st.subheader(f"🎯 偵測到 {len(positive_edges)} 個邊際機會")
-                for i, e in enumerate(positive_edges[:8], 1):
+                for i, e in enumerate(positive_edges[:12], 1):
                     edge_pct = e.get("edge", 0) * 100
                     roi_pct = e.get("expected_roi", 0) * 100
                     kelly_pct = e.get("kelly", 0) * 100
                     model_pct = e.get("model_prob", 0) * 100
                     market_pct = e.get("market_prob", 0) * 100
                     extreme = kelly_pct > 50
+                    etype = e.get("edge_type", "moneyline")
+                    eicon = _type_icons.get(etype, "🎰")
+                    elabel = _type_labels.get(etype, "獨贏")
 
-                    side_color = "#10B981" if e.get("side") == "home" else "#EF4444"
-                    side_tag = e.get("side", "").upper()
+                    side = e.get("side", "")
+                    side_color = _side_colors.get(side, "#10B981")
+                    side_tag = side.upper()
+
+                    line_info = ""
+                    if etype == "spread":
+                        line_val = e.get("line", 0)
+                        line_info = f'<span style="color:#f59e0b;font-size:12px;margin-left:6px">線: {line_val}</span>'
+                    elif etype == "total":
+                        line_val = e.get("line", 0)
+                        line_info = f'<span style="color:#60a5fa;font-size:12px;margin-left:6px">線: {line_val}</span>'
+
+                    model_label = "模型覆蓋率" if etype == "spread" else ("模型 Over 率" if side == "over" else ("模型 Under 率" if side == "under" else "模型勝率"))
+
                     warn = '<span style="background:rgba(239,68,68,.3);color:#ff88aa;border:1px solid #EF4444;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px">⚠ 極端</span>' if extreme else ''
+
+                    type_badge = f'<span style="background:rgba(251,191,36,.15);color:#fbbf24;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;margin-left:6px">{eicon} {elabel}</span>'
 
                     st.markdown(f"""
                     <div class="bigcard" style="margin-bottom:10px">
@@ -444,7 +543,7 @@ try:
                           <span style="color:#88a8c8;font-size:12px">#{i}</span>
                           <span style="font-size:17px;font-weight:900;color:#fff;margin-left:8px">{e.get('picked_team', '')}</span>
                           <span style="background:{side_color}33;border:1px solid {side_color};color:{side_color};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:800;margin-left:6px">{side_tag}</span>
-                          {warn}
+                          {type_badge}{line_info}{warn}
                         </div>
                         <div style="text-align:right">
                           <div style="font-family:monospace;font-size:20px;font-weight:900;color:#EAB308">+{edge_pct:.1f}%</div>
@@ -456,7 +555,7 @@ try:
                       </div>
                       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
                         <div>
-                          <div style="color:#88a8c8">模型勝率</div>
+                          <div style="color:#88a8c8">{model_label}</div>
                           <div style="font-family:monospace;font-size:15px;font-weight:800;color:#10B981">{model_pct:.1f}%</div>
                         </div>
                         <div>
@@ -471,24 +570,29 @@ try:
                     </div>
                     """, unsafe_allow_html=True)
 
-            # 原始 odds
+            # 原始 odds (含讓分/大小)
             if games:
                 st.markdown("---")
                 st.subheader(f"📊 當前 odds ({len(games)} 場)")
                 rows = []
                 for g in games:
                     ml = g.get("moneyline") or {}
+                    spreads = g.get("spreads") or []
+                    totals = g.get("totals") or []
+                    sp_str = " / ".join(f'{s.get("line","")}' for s in spreads) if spreads else "--"
+                    tt_str = " / ".join(f'{t.get("line","")}' for t in totals) if totals else "--"
                     rows.append({
                         "比賽": f"{g.get('away', '')} @ {g.get('home', '')}",
-                        "開賽": g.get("start_time", "")[:19] if g.get("start_time") else "--",
-                        "客勝賠率": ml.get("away", "--"),
-                        "主勝賠率": ml.get("home", "--"),
+                        "客勝": ml.get("away", "--"),
+                        "主勝": ml.get("home", "--"),
+                        "讓分線": sp_str,
+                        "大小線": tt_str,
                     })
                 if rows:
                     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-            st.caption(f"🕐 fetched: {sport.get('fetched_at', '--')} · 來源：台灣運彩 /services/content/get")
-            st.caption("💡 Kelly > 50% 標記「極端」— 實盤建議人工複查模型預測")
+            st.caption(f"🕐 fetched: {sport.get('fetched_at', '--')} · 來源：台灣運彩 /services/content/get (event-level)")
+            st.caption("💡 Kelly > 50% 標記「極端」— 讓分σ=12pts · 大小σ=18pts · 實盤建議人工複查")
 
     # === 策略績效 ===
     with tab_strat:
