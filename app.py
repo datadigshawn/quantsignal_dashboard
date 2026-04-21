@@ -243,6 +243,7 @@ def api_my_nba():
         "games": d.get("games", []),
         "edges": d.get("edges", []),
         "backtest": d.get("backtest", {}),
+        "playoff_bracket": d.get("playoff_bracket", {}),
         "updated": datetime.fromtimestamp(nba_file.stat().st_mtime).isoformat(),
     })
 

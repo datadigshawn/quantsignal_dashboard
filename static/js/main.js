@@ -296,15 +296,95 @@ async function renderTabPionex() {
   } catch (e) { c.innerHTML = `<p class="text-red-400 text-sm">失敗: ${e}</p>`; }
 }
 
+function _bkBadgeCls(s) {
+  const k = (s || "").toLowerCase();
+  if (k === "healthy" || k === "active" || !k) return "bg-green-500/15 text-green-400";
+  if (k === "out" || k.includes("season") || k.includes("reserve")) return "bg-red-500/15 text-red-400";
+  return "bg-yellow-500/15 text-yellow-400";
+}
+
+function _bkMini(m, label) {
+  const topWins = m.top.advance_prob >= m.bot.advance_prob;
+  const topCls = topWins ? "text-green-400 font-bold" : "text-gray-500";
+  const botCls = !topWins ? "text-green-400 font-bold" : "text-gray-500";
+  const games = m.expected_games ? `${m.expected_games.toFixed(1)}場` : "";
+  const playerRow = (t) => {
+    if (!t.star?.name) return "";
+    return `<div class="flex justify-between items-center text-[10px]"><span class="text-gray-400 truncate">★ ${t.star.name}</span><span class="${_bkBadgeCls(t.star.status)} px-1.5 rounded text-[9px] font-mono">${t.star.status||'Healthy'}</span></div>`;
+  };
+  return `
+    <div class="bg-card-dark rounded border border-border-dark p-2">
+      <div class="flex justify-between text-[10px] text-gray-500 mb-1 font-mono"><span>${label}</span><span>${games}</span></div>
+      <div class="flex justify-between items-center text-xs ${topCls}"><span>#${m.top.seed||''} ${m.top.abbrev}</span><span class="font-mono">${m.top.advance_prob.toFixed(1)}%</span></div>
+      <div class="flex justify-between items-center text-xs ${botCls} mt-0.5"><span>#${m.bot.seed||''} ${m.bot.abbrev}</span><span class="font-mono">${m.bot.advance_prob.toFixed(1)}%</span></div>
+      <div class="mt-1 pt-1 border-t border-border-dark text-[10px] text-gray-500 font-mono">Elo ${m.top.elo} vs ${m.bot.elo}</div>
+      ${playerRow(m.top)}${playerRow(m.bot)}
+    </div>`;
+}
+
+function _bkFinalsMini(f) {
+  const westWins = f.west.advance_prob >= f.east.advance_prob;
+  const wCls = westWins ? "text-primary font-bold" : "text-gray-500";
+  const eCls = !westWins ? "text-primary font-bold" : "text-gray-500";
+  return `
+    <div class="bg-gradient-to-br from-primary/10 to-transparent rounded border-2 border-primary/40 p-3 shadow-lg shadow-primary/10">
+      <div class="text-center text-xs text-primary font-bold tracking-widest mb-2">★ TOTAL FINALS ★</div>
+      <div class="flex justify-between items-center text-sm ${wCls}"><span>#${f.west.seed||''} ${f.west.abbrev} (W)</span><span class="font-mono">${f.west.advance_prob.toFixed(1)}%</span></div>
+      <div class="flex justify-between items-center text-sm ${eCls} mt-0.5"><span>#${f.east.seed||''} ${f.east.abbrev} (E)</span><span class="font-mono">${f.east.advance_prob.toFixed(1)}%</span></div>
+      <div class="mt-2 pt-2 border-t border-border-dark text-[10px] text-gray-500 font-mono text-center">Elo ${f.west.elo} vs ${f.east.elo} · ${f.expected_games?.toFixed(1)||'?'}場</div>
+    </div>`;
+}
+
+function renderBracketCompact(bk) {
+  if (!bk || bk.error || !bk.west) return "";
+  const w = bk.west, e = bk.east, f = bk.finals;
+  return `
+    <div class="mt-4 pt-3 border-t border-border-dark">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-sm font-bold text-primary">🏆 季後賽版面 (Monte Carlo)</h4>
+        <span class="text-[10px] text-gray-500 font-mono">n=${(bk.n_sims||0).toLocaleString()}</span>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-3 text-xs">
+        <div class="text-center text-yellow-400 font-bold tracking-wider">◤ 西區</div>
+        <div class="text-center text-primary font-bold tracking-wider">FINALS</div>
+        <div class="text-center text-blue-400 font-bold tracking-wider">東區 ◢</div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <div>${w.conf_finals.map(m => _bkMini(m, '西區冠軍')).join("")}</div>
+        <div>${_bkFinalsMini(f)}</div>
+        <div>${e.conf_finals.map(m => _bkMini(m, '東區冠軍')).join("")}</div>
+      </div>
+      <details class="text-xs">
+        <summary class="cursor-pointer text-gray-400 hover:text-primary">展開準決賽 & 首輪 (${w.r1.length + e.r1.length + w.r2.length + e.r2.length} 場對戰)</summary>
+        <div class="mt-3 space-y-3">
+          <div>
+            <div class="text-[10px] text-gray-500 font-mono mb-1">R2 · 準決賽</div>
+            <div class="grid grid-cols-2 gap-2">
+              ${w.r2.map(m => _bkMini(m, '西區準決賽')).join("")}
+              ${e.r2.map(m => _bkMini(m, '東區準決賽')).join("")}
+            </div>
+          </div>
+          <div>
+            <div class="text-[10px] text-gray-500 font-mono mb-1">R1 · 首輪</div>
+            <div class="grid grid-cols-2 gap-2">
+              ${w.r1.map(m => _bkMini(m, `#${m.top.seed} vs #${m.bot.seed}`)).join("")}
+              ${e.r1.map(m => _bkMini(m, `#${m.top.seed} vs #${m.bot.seed}`)).join("")}
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>`;
+}
+
 async function renderTabNBA() {
   const c = $("#my-tab-content");
   c.innerHTML = '<p class="text-gray-500 text-sm">載入中...</p>';
   try {
     const d = await fetch("/api/my/nba").then(r => r.json());
     const games = d.games || [];
-    if (!games.length) { c.innerHTML = '<p class="text-gray-500 text-sm">今日無比賽</p>'; return; }
-    c.innerHTML = `
-      <div class="space-y-2">
+    const gamesHtml = !games.length
+      ? '<p class="text-gray-500 text-sm">今日無比賽</p>'
+      : `<div class="space-y-2">
         ${games.map(g => {
           const homeWin = g.home_prob > g.away_prob;
           return `
@@ -329,6 +409,7 @@ async function renderTabNBA() {
         }).join("")}
       </div>
       <p class="text-xs text-gray-500 mt-3">回測勝率 ${d.backtest?.all_wr?.toFixed(1) || '--'}% (${d.backtest?.games_tested || 0} 場)</p>`;
+    c.innerHTML = gamesHtml + renderBracketCompact(d.playoff_bracket);
   } catch (e) { c.innerHTML = `<p class="text-red-400 text-sm">失敗: ${e}</p>`; }
 }
 
